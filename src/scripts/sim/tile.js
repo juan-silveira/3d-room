@@ -7,7 +7,7 @@ export class Tile extends SimObject {
    * The type of terrain
    * @type {string}
    */
-  terrain = 'grass';
+  terrain = 'concrete';
   /**
    * The building on this tile
    * @type {Building?}
@@ -44,8 +44,8 @@ export class Tile extends SimObject {
     }
   }
 
-  refreshView(city) {
-    this.building?.refreshView(city);
+  refreshView(room) {
+    this.building?.refreshView(room);
     if (this.building?.hideTerrain) {
       this.setMesh(null);
     } else {
@@ -58,8 +58,8 @@ export class Tile extends SimObject {
     }
   }
 
-  simulate(city) {
-    this.building?.simulate(city);
+  simulate(room) {
+    this.building?.simulate(room);
   }
 
   /**

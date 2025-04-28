@@ -46,15 +46,13 @@ export class AssetManager {
   getModel(name, simObject, transparent = false) {
     const mesh = this.models[name].clone();
 
-    // Clone materials so each object has a unique material
-    // This is so we can set the modify the texture of each
-    // mesh independently (e.g. highlight on mouse over,
-    // abandoned buildings, etc.))
     mesh.traverse((obj) => {
       obj.userData = simObject;
       if(obj.material) {
-        obj.material = obj.material.clone();
-        obj.material.transparent = transparent;
+        if (name !== "cannabis-plant") {
+          obj.material = obj.material.clone();
+          obj.material.transparent = transparent;
+        }
       }
     });
 
@@ -86,10 +84,12 @@ export class AssetManager {
 
         mesh.traverse((obj) => {
           if (obj.material) {
-            obj.material = new THREE.MeshLambertMaterial({
-              map: this.textures.base,
-              specularMap: this.textures.specular
-            })
+            if (name !== "cannabis-plant") {
+              obj.material = new THREE.MeshLambertMaterial({
+                map: this.textures.base,
+                specularMap: this.textures.specular
+              });
+            }
             obj.receiveShadow = receiveShadow;
             obj.castShadow = castShadow;
           }

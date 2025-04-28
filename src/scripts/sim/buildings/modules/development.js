@@ -1,5 +1,5 @@
 import config from '../../../config.js';
-import { City } from '../../city.js';
+import { Room } from '../../room.js';
 import { Zone } from '../../buildings/zones/zone.js';
 import { SimModule } from './simModule.js';
 
@@ -76,9 +76,9 @@ export class DevelopmentModule extends SimModule {
   }
 
   /**
-   * @param {City} city 
+   * @param {Room} room 
    */
-  simulate(city) {
+  simulate(room) {
     this.#checkAbandonmentCriteria();
 
     switch (this.state) {
@@ -118,7 +118,7 @@ export class DevelopmentModule extends SimModule {
   }
 
   /**
-   * @param {City} city 
+   * @param {Room} room 
    * @returns 
    */
   #checkDevelopmentCriteria() {
@@ -129,7 +129,7 @@ export class DevelopmentModule extends SimModule {
   }
 
   /**
-   * @param {City} city 
+   * @param {Room} room 
    * @returns 
    */
   #checkAbandonmentCriteria() {

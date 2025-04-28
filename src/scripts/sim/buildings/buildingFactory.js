@@ -6,6 +6,7 @@ import { Road } from './transportation/road.js';
 import { Building } from './building.js';
 import { PowerPlant } from './power/powerPlant.js';
 import { PowerLine } from './power/powerLine.js';
+import { CannabisPlant } from './power/cannabisPlant.js';
 
 /**
  * Creates a new building object
@@ -17,17 +18,19 @@ import { PowerLine } from './power/powerLine.js';
 export function createBuilding(x, y, type) {
   switch (type) {
     case BuildingType.residential: 
-      return new ResidentialZone();
+      return new ResidentialZone(x, y);
     case BuildingType.commercial: 
-      return new CommercialZone();
+      return new CommercialZone(x, y);
     case BuildingType.industrial: 
-      return new IndustrialZone();
+      return new IndustrialZone(x, y);
     case BuildingType.road: 
-      return new Road();
+      return new Road(x, y);
     case BuildingType.powerPlant:
-      return new PowerPlant();
+      return new PowerPlant(x, y);
     case BuildingType.powerLine:
-      return new PowerLine();
+      return new PowerLine(x, y);
+    case BuildingType.cannabisPlant:
+      return new CannabisPlant(x, y);
     default:
       console.error(`${type} is not a recognized building type.`);
   }

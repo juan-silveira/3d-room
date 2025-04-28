@@ -1,8 +1,8 @@
-# CitySim.js
+# RoomSim.js
 
 ## What is this?
 
-This is an ongoing project where I attempt to create a clone of SimCity using [Three.js](https://threejs.org/).
+This is an ongoing project where I attempt to create a clone of SimRoom using [Three.js](https://threejs.org/).
 
 ## How do I run this locally?
 
@@ -22,7 +22,7 @@ Want to know how I made this? Follow the YouTube tutorial series [here](https://
 
 Here you go! (FYI - At the moment this game does not have mobile support)
 
-https://dgreenheck.github.io/simcity-threejs-clone
+https://dgreenheck.github.io/cultivationRoom-threejs-clone
 
 ## Support
 

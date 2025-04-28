@@ -1,13 +1,13 @@
-import { City } from '../city.js';
+import { Room } from '../room.js';
 
 /**
- * A service represents simulation logic that is applied at the city level.
+ * A service represents simulation logic that is applied at the room level.
  */
 export class SimService {
   /**
-   * @param {City} city 
+   * @param {Room} room 
    */
-  simulate(city) {
+  simulate(room) {
     // Implement in subclass
   }
 }

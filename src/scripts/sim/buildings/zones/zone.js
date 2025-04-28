@@ -53,9 +53,9 @@ export class Zone extends Building {
     this.setMesh(mesh);
   }
 
-  simulate(city) {
-    super.simulate(city);
-    this.development.simulate(city);
+  simulate(room) {
+    super.simulate(room);
+    this.development.simulate(room);
   }
 
   /**

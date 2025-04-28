@@ -63,9 +63,9 @@ export class SimObject extends THREE.Object3D {
 
   /**
    * Updates the state of this object by one simulation step
-   * @param {City} city 
+   * @param {Room} room 
    */
-  simulate(city) {
+  simulate(room) {
     // Override in subclass
   }
 

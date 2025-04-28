@@ -1,5 +1,5 @@
 import config from '../../../config.js';
-import { City } from '../../city.js';
+import { Room } from '../../room.js';
 import { Building } from '../building.js';
 import { SimModule } from './simModule.js';
 
@@ -31,13 +31,13 @@ export class RoadAccessModule extends SimModule {
 
   /**
    * Updates the state of this attribute
-   * @param {City} city 
+   * @param {Room} room 
    */
-  simulate(city) {
+  simulate(room) {
     if (!this.enabled) {
       this.value = true;
     } else {
-      const road = city.findTile(
+      const road = room.findTile(
         this.building, 
         (tile) => tile.building?.type === 'road', 
         config.modules.roadAccess.searchDistance);

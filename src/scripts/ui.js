@@ -65,12 +65,28 @@ export class GameUI {
    * @param {Game} game 
    */
   updateTitleBar(game) {
-    document.getElementById('city-name').innerHTML = game.city.name;
-    document.getElementById('population-counter').innerHTML = game.city.population;
+    document.getElementById('room-name').innerHTML = game.room.name;
+    document.getElementById('population-counter').innerHTML = game.room.population;
 
     const date = new Date('1/1/2023');
-    date.setDate(date.getDate() + game.city.simTime);
+    date.setDate(date.getDate() + game.room.simTime);
     document.getElementById('sim-time').innerHTML = date.toLocaleDateString();
+  }
+
+  /**
+   * Updates the terrain type for all tiles
+   * @param {Event} event The click event from the terrain button
+   */
+  updateTerrain(event) {
+    const terrain = event.target.getAttribute('data-type');
+    const room = window.game.room;
+    
+    // Update terrain for all tiles
+    for (let x = 0; x < room.width; x++) {
+      for (let y = 0; y < room.height; y++) {
+        room.setTerrain(terrain, x, y);
+      }
+    }
   }
 
   /**

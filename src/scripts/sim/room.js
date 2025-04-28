@@ -6,7 +6,7 @@ import { VehicleGraph } from './vehicles/vehicleGraph.js';
 import { PowerService } from './services/power.js';
 import { SimService } from './services/simService.js';
 
-export class City extends THREE.Group {
+export class Room extends THREE.Group {
   /**
    * Separate group for organizing debug meshes so they aren't included
    * in raycasting checks
@@ -19,21 +19,26 @@ export class City extends THREE.Group {
    */
   root = new THREE.Group();
   /**
-   * List of services for the city
+   * List of services for the room
    * @type {SimService}
    */
   services = [];
   /**
-   * The size of the city in tiles
+   * The width of the room in tiles
    * @type {number}
    */
-  size = 16;
+  width = 16;
+  /**
+   * The height of the room in tiles
+   * @type {number}
+   */
+  height = 16;
   /**
    * The current simulation time
    */
   simTime = 0;
   /**
-   * 2D array of tiles that make up the city
+   * 2D array of tiles that make up the room
    * @type {Tile[][]}
    */
   tiles = [];
@@ -43,20 +48,22 @@ export class City extends THREE.Group {
    */
   vehicleGraph;
 
-  constructor(size, name = 'My City') {
+  constructor(width, height, name = 'My Room') {
     super();
 
     this.name = name;
-    this.size = size;
+    this.width = width;
+    this.height = height;
     
     this.add(this.debugMeshes);
     this.add(this.root);
 
     this.tiles = [];
-    for (let x = 0; x < this.size; x++) {
+    for (let x = 0; x < this.width; x++) {
       const column = [];
-      for (let y = 0; y < this.size; y++) {
+      for (let y = 0; y < this.height; y++) {
         const tile = new Tile(x, y);
+        tile.setBuilding(createBuilding(x, y, 'cannabis-plant'));
         tile.refreshView(this);
         this.root.add(tile);
         column.push(tile);
@@ -67,18 +74,18 @@ export class City extends THREE.Group {
     this.services = [];
     this.services.push(new PowerService());
     
-    this.vehicleGraph = new VehicleGraph(this.size);
+    this.vehicleGraph = new VehicleGraph(this.width, this.height);
     this.debugMeshes.add(this.vehicleGraph);
   }
 
   /**
-   * The total population of the city
+   * The total population of the room
    * @type {number}
    */
   get population() {
     let population = 0;
-    for (let x = 0; x < this.size; x++) {
-      for (let y = 0; y < this.size; y++) {
+    for (let x = 0; x < this.width; x++) {
+      for (let y = 0; y < this.height; y++) {
         const tile = this.getTile(x, y);
         population += tile.building?.residents?.count ?? 0;
       }
@@ -95,7 +102,7 @@ export class City extends THREE.Group {
   getTile(x, y) {
     if (x === undefined || y === undefined ||
       x < 0 || y < 0 ||
-      x >= this.size || y >= this.size) {
+      x >= this.width || y >= this.height) {
       return null;
     } else {
       return this.tiles[x][y];
@@ -113,8 +120,8 @@ export class City extends THREE.Group {
       this.services.forEach((service) => service.simulate(this));
 
       // Update each building
-      for (let x = 0; x < this.size; x++) {
-        for (let y = 0; y < this.size; y++) {
+      for (let x = 0; x < this.width; x++) {
+        for (let y = 0; y < this.height; y++) {
           this.getTile(x, y).simulate(this);
         }
       }
@@ -151,11 +158,11 @@ export class City extends THREE.Group {
   }
 
   /**
-   * Bulldozes the building at the specified coordinates
+   * Trashes the building at the specified coordinates
    * @param {number} x 
    * @param {number} y
    */
-  bulldoze(x, y) {
+  trash(x, y) {
     const tile = this.getTile(x, y);
 
     if (tile.building) {
@@ -233,16 +240,46 @@ export class City extends THREE.Group {
     if (x > 0) {
       neighbors.push(this.getTile(x - 1, y));
     }
-    if (x < this.size - 1) {
+    if (x < this.width - 1) {
       neighbors.push(this.getTile(x + 1, y));
     }
     if (y > 0) {
       neighbors.push(this.getTile(x, y - 1));
     }
-    if (y < this.size - 1) {
+    if (y < this.height - 1) {
       neighbors.push(this.getTile(x, y + 1));
     }
 
     return neighbors;
+  }
+
+  /**
+   * Sets the terrain type for the selected tile
+   * @param {string} terrainType The type of terrain to set
+   * @param {number} x The x-coordinate of the tile
+   * @param {number} y The y-coordinate of the tile
+   */
+  setTerrain(terrainType, x, y) {
+    const tile = this.getTile(x, y);
+    if (tile) {
+      tile.terrain = terrainType;
+      tile.refreshView(this);
+    }
+  }
+
+  /**
+   * Updates the terrain type for all tiles
+   * @param {Event} event The click event from the terrain button
+   */
+  updateTerrain(event) {
+    const terrain = event.target.getAttribute('data-type');
+    const room = window.game.room;
+    
+    // Update terrain for all tiles
+    for (let x = 0; x < room.width; x++) {
+      for (let y = 0; y < room.height; y++) {
+        room.setTerrain(terrain, x, y);
+      }
+    }
   }
 }

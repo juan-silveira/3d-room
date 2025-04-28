@@ -2,17 +2,18 @@ import * as THREE from 'three';
 import { AssetManager } from './assets/assetManager.js';
 import { CameraManager } from './camera.js';
 import { InputManager } from './input.js';
-import { City } from './sim/city.js';
+import { Room } from './sim/room.js';
 import { SimObject } from './sim/simObject.js';
+import { Tile } from './sim/tile.js';
 
 /** 
- * Manager for the Three.js scene. Handles rendering of a `City` object
+ * Manager for the Three.js scene. Handles rendering of a `Room` object
  */
 export class Game {
   /**
-   * @type {City}
+   * @type {Room}
    */
-  city;
+  room;
   /**
    * Object that currently hs focus
    * @type {SimObject | null}
@@ -28,9 +29,14 @@ export class Game {
    * @type {SimObject | null}
    */
   selectedObject = null;
+  /**
+   * Tile that is currently selected
+   * @type {Tile | null}
+   */
+  selectedTile = null;
 
-  constructor(city) {
-    this.city = city;
+  constructor(room) {
+    this.room = room;
 
     this.renderer = new THREE.WebGLRenderer({ 
       antialias: true
@@ -58,8 +64,8 @@ export class Game {
     window.assetManager = new AssetManager(() => {
       window.ui.hideLoadingText();
 
-      this.city = new City(16);
-      this.initialize(this.city);
+      this.room = new Room(12, 30);
+      this.initialize(this.room);
       this.start();
 
       setInterval(this.simulate.bind(this), 1000);
@@ -71,14 +77,14 @@ export class Game {
   /**
    * Initalizes the scene, clearing all existing assets
    */
-  initialize(city) {
+  initialize(room) {
     this.scene.clear();
-    this.scene.add(city);
+    this.scene.add(room);
     this.#setupLights();
-    this.#setupGrid(city);
+    this.#setupGrid(room);
   }
 
-  #setupGrid(city) {
+  #setupGrid(room) {
     // Add the grid
     const gridMaterial = new THREE.MeshBasicMaterial({ 
       color: 0x000000,
@@ -86,15 +92,15 @@ export class Game {
       transparent: true,
       opacity: 0.2
     });
-    gridMaterial.map.repeat = new THREE.Vector2(city.size, city.size);
-    gridMaterial.map.wrapS = city.size;
-    gridMaterial.map.wrapT = city.size;
+    gridMaterial.map.repeat = new THREE.Vector2(room.width, room.height);
+    gridMaterial.map.wrapS = room.width;
+    gridMaterial.map.wrapT = room.height;
 
     const grid = new THREE.Mesh(
-      new THREE.BoxGeometry(city.size, 0.1, city.size),
+      new THREE.BoxGeometry(room.width, 0.1, room.height),
       gridMaterial
     );
-    grid.position.set(city.size / 2 - 0.5, -0.04, city.size / 2 - 0.5);
+    grid.position.set(room.width / 2 - 0.5, -0.04, room.height / 2 - 0.5);
     this.scene.add(grid);
   }
 
@@ -102,20 +108,26 @@ export class Game {
    * Setup the lights for the scene
    */
   #setupLights() {
-    const sun = new THREE.DirectionalLight(0xffffff, 2)
-    sun.position.set(-10, 20, 0);
+    const centerX = this.room.width / 2 - 0.5;
+    const centerZ = this.room.height / 2 - 0.5;
+
+    // Luz direcional exatamente acima do centro da sala
+    const sun = new THREE.DirectionalLight(0xffffff, 2);
+    sun.position.set(centerX, 40, centerZ);
     sun.castShadow = true;
-    sun.shadow.camera.left = -20;
-    sun.shadow.camera.right = 20;
-    sun.shadow.camera.top = 20;
-    sun.shadow.camera.bottom = -20;
+    sun.shadow.camera.left = -this.room.width;
+    sun.shadow.camera.right = this.room.width;
+    sun.shadow.camera.top = this.room.height;
+    sun.shadow.camera.bottom = -this.room.height;
     sun.shadow.mapSize.width = 2048;
     sun.shadow.mapSize.height = 2048;
-    sun.shadow.camera.near = 10;
-    sun.shadow.camera.far = 50;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 60;
     sun.shadow.normalBias = 0.01;
     this.scene.add(sun);
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+    // Luz ambiente para suavizar sombras
+    this.scene.add(new THREE.AmbientLight(0xffffff, 1.0));
   }
   
   /**
@@ -136,7 +148,7 @@ export class Game {
    * Render the contents of the scene
    */
   draw() {
-    this.city.draw();
+    this.room.draw();
     this.updateFocusedObject();
 
     if (this.inputManager.isLeftMouseDown) {
@@ -152,10 +164,10 @@ export class Game {
   simulate() {
     if (window.ui.isPaused) return;
 
-    // Update the city data model first, then update the scene
-    this.city.simulate(1);
+    // Update the room data model first, then update the scene
+    this.room.simulate(1);
 
-    window.ui.updateTitleBar(this);
+    // window.ui.updateTitleBar(this);
     window.ui.updateInfoPanel(this.selectedObject);
   }
 
@@ -168,16 +180,16 @@ export class Game {
         this.updateSelectedObject();
         window.ui.updateInfoPanel(this.selectedObject);
         break;
-      case 'bulldoze':
+      case 'trash':
         if (this.focusedObject) {
           const { x, y } = this.focusedObject;
-          this.city.bulldoze(x, y);
+          this.room.trash(x, y);
         }
         break;
       default:
         if (this.focusedObject) {
           const { x, y } = this.focusedObject;
-          this.city.placeBuilding(x, y, window.ui.activeToolId);
+          this.room.placeBuilding(x, y, window.ui.activeToolId);
         }
         break;
     }
@@ -190,6 +202,13 @@ export class Game {
     this.selectedObject?.setSelected(false);
     this.selectedObject = this.focusedObject;
     this.selectedObject?.setSelected(true);
+    
+    // Update the selected tile
+    if (this.selectedObject instanceof Tile) {
+      this.selectedTile = this.selectedObject;
+    } else {
+      this.selectedTile = null;
+    }
   }
 
   /**
@@ -218,7 +237,7 @@ export class Game {
 
     this.raycaster.setFromCamera(coords, this.cameraManager.camera);
 
-    let intersections = this.raycaster.intersectObjects(this.city.root.children, true);
+    let intersections = this.raycaster.intersectObjects(this.room.root.children, true);
     if (intersections.length > 0) {
       // The SimObject attached to the mesh is stored in the user data
       const selectedObject = intersections[0].object.userData;

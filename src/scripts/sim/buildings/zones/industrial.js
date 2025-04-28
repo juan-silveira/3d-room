@@ -1,4 +1,4 @@
-import { City } from '../../city.js';
+import { Room } from '../../room.js';
 import { JobsModule } from '../modules/jobs.js';
 import { BuildingType } from '../buildingType.js';
 import { Zone } from './zone.js';
@@ -17,10 +17,10 @@ export class IndustrialZone extends Zone {
 
   /**
    * Steps the state of the zone forward in time by one simulation step
-   * @param {City} city 
+   * @param {Room} room 
    */
-  simulate(city) {
-    super.simulate(city);
+  simulate(room) {
+    super.simulate(room);
     this.jobs.simulate();
   }
 

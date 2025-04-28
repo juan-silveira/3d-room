@@ -64,11 +64,11 @@ export class Building extends SimObject {
     }
   }
 
-  simulate(city) {
-    super.simulate(city);
+  simulate(room) {
+    super.simulate(room);
     
-    this.power.simulate(city);
-    this.roadAccess.simulate(city);
+    this.power.simulate(room);
+    this.roadAccess.simulate(room);
 
     if (!this.power.isFullyPowered) {
       this.setStatus(BuildingStatus.NoPower);

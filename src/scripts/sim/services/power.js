@@ -1,17 +1,17 @@
 import { BuildingType } from '../buildings/buildingType.js';
-import { City } from '../city.js';
+import { Room } from '../room.js';
 
 export class PowerService {
   /**
-   * @param {City} city 
+   * @param {Room} room 
    */
-  simulate(city) {
-    // Find all power plants in the city
+  simulate(room) {
+    // Find all power plants in the room
     const powerPlantList = [];
-    for (let x = 0; x < city.size; x++) {
-      for (let y = 0; y < city.size; y++) {
-        const tile = city.getTile(x, y);
-        const building = city.getTile(x, y).building;
+    for (let x = 0; x < room.size; x++) {
+      for (let y = 0; y < room.size; y++) {
+        const tile = room.getTile(x, y);
+        const building = room.getTile(x, y).building;
         if (building) {
           if (building.type === BuildingType.powerPlant) {
             const powerPlant = building;
@@ -77,10 +77,10 @@ export class PowerService {
           // 2) The tile has a building (power can pass through non-powered buildings)
           const shouldVisit = (tile) => tile && !visited.includes(tile) && tile.building;
 
-          let left = city.getTile(x - 1, y);
-          let right = city.getTile(x + 1, y);
-          let top = city.getTile(x, y - 1);
-          let bottom = city.getTile(x, y + 1);
+          let left = room.getTile(x - 1, y);
+          let right = room.getTile(x + 1, y);
+          let top = room.getTile(x, y - 1);
+          let bottom = room.getTile(x, y + 1);
 
           if (shouldVisit(left)) {
             frontier.push(left);

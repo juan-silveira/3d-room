@@ -1,6 +1,6 @@
 import config from '../../../config.js';
 import { Citizen } from '../../citizen.js';
-import { City } from '../../city.js';
+import { Room } from '../../room.js';
 import { Zone as ResidentialZone } from '../../buildings/zones/zone.js';
 import { DevelopmentState } from './development.js';
 import { SimModule } from './simModule.js';
@@ -44,9 +44,9 @@ export class ResidentsModule extends SimModule {
   }
 
   /**
-   * @param {City} city 
+   * @param {Room} room 
    */
-  simulate(city) {
+  simulate(room) {
     // If building is abandoned, all residents are evicted and no more residents are allowed to move in.
     if (this.#zone.development.state === DevelopmentState.abandoned && this.#residents.length > 0) {
       this.evictAll();
@@ -58,7 +58,7 @@ export class ResidentsModule extends SimModule {
     }
 
     for (const resident of this.#residents) {
-      resident.simulate(city);
+      resident.simulate(room);
     }
   }
 
