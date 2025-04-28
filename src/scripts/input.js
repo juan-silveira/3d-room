@@ -80,34 +80,60 @@ export class InputManager {
   }
 
   #onTouchStart(event) {
-    if (event.touches.length === 1) {
-      this.isLeftMouseDown = true;
-      this.isRightMouseDown = false;
-      // Atualiza posição do mouse
-      this.mouse.x = event.touches[0].clientX;
-      this.mouse.y = event.touches[0].clientY;
-    } else if (event.touches.length === 2) {
-      this.isLeftMouseDown = false;
-      this.isRightMouseDown = true;
-      // Salva posição inicial dos dois dedos para pan/zoom
-      this._touchStartDist = this.#getTouchDistance(event);
-      this._touchStartMid = this.#getTouchMidpoint(event);
+    if (window.ui.navMode) {
+      // Modo navegação: 1 dedo = rotate, 2 dedos = pan/zoom
+      if (event.touches.length === 1) {
+        this.isLeftMouseDown = false;
+        this.isRightMouseDown = true; // rotate
+        this.mouse.x = event.touches[0].clientX;
+        this.mouse.y = event.touches[0].clientY;
+      } else if (event.touches.length === 2) {
+        this.isLeftMouseDown = false;
+        this.isRightMouseDown = true; // pan/zoom
+        this._touchStartDist = this.#getTouchDistance(event);
+        this._touchStartMid = this.#getTouchMidpoint(event);
+      }
+    } else {
+      // Modo seleção: 1 dedo = clique
+      if (event.touches.length === 1) {
+        this.isLeftMouseDown = true;
+        this.isRightMouseDown = false;
+        this.mouse.x = event.touches[0].clientX;
+        this.mouse.y = event.touches[0].clientY;
+      } else if (event.touches.length === 2) {
+        this.isLeftMouseDown = false;
+        this.isRightMouseDown = true;
+        this._touchStartDist = this.#getTouchDistance(event);
+        this._touchStartMid = this.#getTouchMidpoint(event);
+      }
     }
   }
 
   #onTouchMove(event) {
-    if (event.touches.length === 1) {
-      this.mouse.x = event.touches[0].clientX;
-      this.mouse.y = event.touches[0].clientY;
-    } else if (event.touches.length === 2) {
-      // Pan
-      const mid = this.#getTouchMidpoint(event);
-      this.mouse.x = mid.x;
-      this.mouse.y = mid.y;
-      // Zoom
-      const dist = this.#getTouchDistance(event);
-      this._touchDeltaDist = dist - (this._touchStartDist || dist);
-      // Você pode usar this._touchDeltaDist para acionar zoom na câmera
+    if (window.ui.navMode) {
+      if (event.touches.length === 1) {
+        // rotate
+        this.mouse.x = event.touches[0].clientX;
+        this.mouse.y = event.touches[0].clientY;
+      } else if (event.touches.length === 2) {
+        // pan/zoom
+        const mid = this.#getTouchMidpoint(event);
+        this.mouse.x = mid.x;
+        this.mouse.y = mid.y;
+        const dist = this.#getTouchDistance(event);
+        this._touchDeltaDist = dist - (this._touchStartDist || dist);
+      }
+    } else {
+      if (event.touches.length === 1) {
+        this.mouse.x = event.touches[0].clientX;
+        this.mouse.y = event.touches[0].clientY;
+      } else if (event.touches.length === 2) {
+        const mid = this.#getTouchMidpoint(event);
+        this.mouse.x = mid.x;
+        this.mouse.y = mid.y;
+        const dist = this.#getTouchDistance(event);
+        this._touchDeltaDist = dist - (this._touchStartDist || dist);
+      }
     }
   }
 
@@ -116,8 +142,13 @@ export class InputManager {
       this.isLeftMouseDown = false;
       this.isRightMouseDown = false;
     } else if (event.touches.length === 1) {
-      this.isLeftMouseDown = true;
-      this.isRightMouseDown = false;
+      if (window.ui.navMode) {
+        this.isLeftMouseDown = false;
+        this.isRightMouseDown = true;
+      } else {
+        this.isLeftMouseDown = true;
+        this.isRightMouseDown = false;
+      }
     }
   }
 

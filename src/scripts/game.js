@@ -34,6 +34,7 @@ export class Game {
    * @type {Tile | null}
    */
   selectedTile = null;
+  _lastTouch = { x: null, y: null, dist: null };
 
   constructor(room) {
     this.room = room;
@@ -148,6 +149,48 @@ export class Game {
    * Render the contents of the scene
    */
   draw() {
+    // --- TOUCH CAMERA CONTROLS (mobile nav mode) ---
+    if (window.ui.navMode && ('ontouchstart' in window)) {
+      const im = this.inputManager;
+      // ROTATE (1 dedo)
+      if (im.isRightMouseDown && !im._touchDeltaDist) {
+        if (this._lastTouch.x !== null && this._lastTouch.y !== null) {
+          const dx = im.mouse.x - this._lastTouch.x;
+          const dy = im.mouse.y - this._lastTouch.y;
+          this.cameraManager.cameraAzimuth += -(dx * 0.2); // igual ao AZIMUTH_SENSITIVITY
+          this.cameraManager.cameraElevation += (dy * 0.2);
+          this.cameraManager.cameraElevation = Math.min(90, Math.max(0, this.cameraManager.cameraElevation));
+        }
+        this._lastTouch.x = im.mouse.x;
+        this._lastTouch.y = im.mouse.y;
+      } else if (im.isRightMouseDown && im._touchDeltaDist !== undefined) {
+        // PAN/ZOOM (2 dedos)
+        if (this._lastTouch.x !== null && this._lastTouch.y !== null) {
+          const dx = im.mouse.x - this._lastTouch.x;
+          const dy = im.mouse.y - this._lastTouch.y;
+          // Pan
+          const forward = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0,1,0), this.cameraManager.cameraAzimuth * Math.PI/180);
+          const left = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0,1,0), this.cameraManager.cameraAzimuth * Math.PI/180);
+          this.cameraManager.cameraOrigin.add(forward.multiplyScalar(-0.01 * dy));
+          this.cameraManager.cameraOrigin.add(left.multiplyScalar(-0.01 * dx));
+        }
+        // Zoom
+        if (this._lastTouch.dist !== null && im._touchDeltaDist !== undefined) {
+          this.cameraManager.cameraRadius *= 1 - (im._touchDeltaDist * 0.002 / 100);
+          this.cameraManager.cameraRadius = Math.min(5, Math.max(0.1, this.cameraManager.cameraRadius));
+        }
+        this._lastTouch.x = im.mouse.x;
+        this._lastTouch.y = im.mouse.y;
+        this._lastTouch.dist = im._touchStartDist + (im._touchDeltaDist || 0);
+      } else {
+        this._lastTouch.x = null;
+        this._lastTouch.y = null;
+        this._lastTouch.dist = null;
+      }
+      this.cameraManager.updateCameraPosition();
+    }
+    // --- FIM TOUCH CAMERA CONTROLS ---
+
     this.room.draw();
     this.updateFocusedObject();
 

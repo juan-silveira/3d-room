@@ -18,6 +18,23 @@ export class GameUI {
    * @type {boolean}
    */
   isPaused = false;
+  /**
+   * Modo de navegação para mobile
+   * @type {boolean}
+   */
+  navMode = false;
+
+  constructor() {
+    // Detecta se é mobile/touch
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+      const navBtn = document.getElementById('button-nav-mode');
+      navBtn.style.display = '';
+      navBtn.classList.add('selected');
+      this.navMode = true;
+      // Desmarca o botão de seleção
+      document.getElementById('button-select').classList.remove('selected');
+    }
+  }
 
   get gameWindow() {
     return document.getElementById('render-target');
@@ -44,6 +61,12 @@ export class GameUI {
     this.selectedControl.classList.add('selected');
 
     this.activeToolId = this.selectedControl.getAttribute('data-type');
+    // Se for mobile, alterna para modo seleção
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+      this.navMode = false;
+      document.getElementById('button-nav-mode').classList.remove('selected');
+      document.getElementById('button-select').classList.add('selected');
+    }
   }
 
   /**
@@ -102,6 +125,15 @@ export class GameUI {
       infoElement.style.visibility = 'hidden';
       infoElement.innerHTML = '';
     }
+  }
+
+  /**
+   * Alterna o modo de navegação no mobile
+   */
+  onNavModeSelected(event) {
+    this.navMode = true;
+    document.getElementById('button-nav-mode').classList.add('selected');
+    document.getElementById('button-select').classList.remove('selected');
   }
 }
 
