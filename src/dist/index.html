@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="./main.css">
+  <link rel="icon" type="image/x-icon" href="./favicon.ico">
+  
+  
+  <script type="module" crossorigin src="./assets/index-8ad36f6c.js"></script>
+</head>
+
+<body>
+  <div id="root-window">
+    <!-- Three.js adds a `canvas` element to this element-->
+    <div id="render-target"></div>
+    <div id="loading" class="text-overlay">
+      <div>
+        LOADING...
+      </div>
+    </div>
+    <div id="paused-text" class="text-overlay" style="visibility: hidden;">
+      <div>
+        PAUSED
+      </div>
+    </div>
+    <div id="ui">
+      <!-- <div id="title-bar">
+        <div class="title-bar-left-items title-bar-items">
+          $1000
+        </div>
+        <div class="title-bar-center-items title-bar-items">
+          <span id="city-name">My City</span>
+          <span>&nbsp;-&nbsp;</span>
+          <span id="sim-time">1/1/2023</span>
+        </div>
+        <div class="title-bar-right-items title-bar-items">
+          <img id="population-icon" src="/icons/person.png">
+          <span id="population-counter">0</span>
+        </div>
+      </div> -->
+      <div id="ui-toolbar" class="side-menu">
+        <button id='button-select' class="ui-button selected" data-type="select"
+          onclick="ui.onToolSelected(event)">
+          <img class="toolbar-icon" src="./icons/select-color.png">
+        </button>
+        <button id='button-trash' class="ui-button" data-type="trash"
+          onclick="ui.onToolSelected(event)">
+          <img class="toolbar-icon" src="./icons/trash.png">
+        </button>
+        <button id='button-cannabis-plant' class="ui-button" data-type="cannabis-plant"
+          onclick="ui.onToolSelected(event)">
+          <img class="toolbar-icon" src="./icons/cannabis-plant.png">
+        </button>
+        <div style="margin-top: 10px;color: white;">Terrain:</div>
+        <button id='button-terrain-grass' class="ui-button position-relative" data-type="grass"
+          onclick="ui.updateTerrain(event)">
+          <span class="toolbar-icon terrain-button" style="background-color: #467a33;"></span>
+        </button>
+        <button id='button-terrain-concrete' class="ui-button position-relative" data-type="concrete"
+          onclick="ui.updateTerrain(event)">
+          <span class="toolbar-icon terrain-button" style="background-color: #918b89;"></span>
+        </button>
+        <button id='button-terrain-dirt' class="ui-button position-relative" data-type="dirt"
+          onclick="ui.updateTerrain(event)">
+          <span class="toolbar-icon terrain-button" style="background-color: #423126;"></span>
+        </button>
+        <button id='button-terrain-sand' class="ui-button position-relative" data-type="sand"
+          onclick="ui.updateTerrain(event)">
+          <span class="toolbar-icon terrain-button" style="background-color: #d78c3b;"></span>
+        </button>
+        <button id='button-terrain-asphalt' class="ui-button position-relative" data-type="asphalt"
+          onclick="ui.updateTerrain(event)">
+          <span class="toolbar-icon terrain-button" style="background-color: #363333;"></span>
+        </button>
+        <button id='button-terrain-water' class="ui-button position-relative" data-type="water"
+          onclick="ui.updateTerrain(event)">
+          <span class="toolbar-icon terrain-button" style="background-color: #37b4be;"></span>
+        </button>
+      </div>
+      <div id="info-panel" class="container">
+      </div>
+      <div id="version">
+        v0.3.0
+      </div>
+      <div id="instructions">
+        INTERACT - Left Mouse<br>
+        ROTATE - Right Mouse<br>
+        PAN - Control + Right Mouse<br>
+        ZOOM - Scroll
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
