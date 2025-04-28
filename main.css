@@ -51,7 +51,7 @@ h1 {
 #instructions {
   position: absolute;
   color: white;
-  left: 0;
+  right: 0;
   bottom: 0;
   margin: 8px;
 }
@@ -59,7 +59,7 @@ h1 {
 #version {
   position: absolute;
   color: white;
-  right: 0;
+  left: 0;
   bottom: 0;
   margin: 8px;
 }
