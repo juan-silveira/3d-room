@@ -1,7 +1,5 @@
 import { Game } from './game';
-import { SimObject } from './sim/simObject';
-import playIconUrl from '/icons/play-color.png';
-import pauseIconUrl from '/icons/pause-color.png';
+import { Object } from './sim/object';
 
 export class GameUI {
   /**
@@ -70,20 +68,6 @@ export class GameUI {
   }
 
   /**
-   * Toggles the pause state of the game
-   */
-  togglePause() {
-    this.isPaused = !this.isPaused;
-    if (this.isPaused) {
-      document.getElementById('pause-button-icon').src = playIconUrl;
-      document.getElementById('paused-text').style.visibility = 'visible';
-    } else {
-      document.getElementById('pause-button-icon').src = pauseIconUrl;
-      document.getElementById('paused-text').style.visibility = 'hidden';
-    }
-  }
-
-  /**
    * Updates the values in the title bar
    * @param {Game} game 
    */
@@ -101,7 +85,10 @@ export class GameUI {
    * @param {Event} event The click event from the terrain button
    */
   updateTerrain(event) {
-    const terrain = event.target.getAttribute('data-type');
+    const target = event.target;
+    // Se o clique foi em um elemento filho, subimos até encontrar o li
+    const liElement = target.closest('li');
+    const terrain = liElement.getAttribute('data-type');
     const room = window.game.room;
     
     // Update terrain for all tiles
@@ -114,7 +101,7 @@ export class GameUI {
 
   /**
    * Updates the info panel with the information in the object
-   * @param {SimObject} object 
+   * @param {Object} object 
    */
   updateInfoPanel(object) {
     const infoElement = document.getElementById('info-panel')

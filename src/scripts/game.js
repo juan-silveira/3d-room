@@ -3,7 +3,7 @@ import { AssetManager } from './assets/assetManager.js';
 import { CameraManager } from './camera.js';
 import { InputManager } from './input.js';
 import { Room } from './sim/room.js';
-import { SimObject } from './sim/simObject.js';
+import { Object } from './sim/object.js';
 import { Tile } from './sim/tile.js';
 
 /** 
@@ -16,7 +16,7 @@ export class Game {
   room;
   /**
    * Object that currently hs focus
-   * @type {SimObject | null}
+   * @type {Object | null}
    */
   focusedObject = null;
   /**
@@ -26,7 +26,7 @@ export class Game {
   inputManager;
   /**
    * Object that is currently selected
-   * @type {SimObject | null}
+   * @type {Object | null}
    */
   selectedObject = null;
   /**
@@ -191,7 +191,6 @@ export class Game {
     }
     // --- FIM TOUCH CAMERA CONTROLS ---
 
-    this.room.draw();
     this.updateFocusedObject();
 
     if (this.inputManager.isLeftMouseDown) {
@@ -282,9 +281,12 @@ export class Game {
 
     let intersections = this.raycaster.intersectObjects(this.room.root.children, true);
     if (intersections.length > 0) {
-      // The SimObject attached to the mesh is stored in the user data
-      const selectedObject = intersections[0].object.userData;
-      return selectedObject;
+      // Get the first intersection and find its parent Object
+      let current = intersections[0].object;
+      while (current && (!current.userData || !current.userData.instance)) {
+        current = current.parent;
+      }
+      return current?.userData?.instance || null;
     } else {
       return null;
     }

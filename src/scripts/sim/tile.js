@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { Building } from './buildings/building.js';
-import { SimObject } from './simObject.js';
+import { Object } from './object.js';
 
-export class Tile extends SimObject {
+export class Tile extends Object {
   /**
    * The type of terrain
    * @type {string}

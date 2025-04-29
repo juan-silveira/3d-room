@@ -1,10 +1,9 @@
 import * as THREE from 'three';
 import { BuildingType } from './buildings/buildingType.js';
-import { createBuilding } from './buildings/buildingFactory.js';
+import { createBuilding } from './buildings/buildingObjects.js';
 import { Tile } from './tile.js';
-import { VehicleGraph } from './vehicles/vehicleGraph.js';
-import { PowerService } from './services/power.js';
-import { SimService } from './services/simService.js';
+import { Service } from './services/service.js';
+import { PlantsModule } from './buildings/modules/plants.js';
 
 export class Room extends THREE.Group {
   /**
@@ -20,7 +19,7 @@ export class Room extends THREE.Group {
   root = new THREE.Group();
   /**
    * List of services for the room
-   * @type {SimService}
+   * @type {Service}
    */
   services = [];
   /**
@@ -43,10 +42,9 @@ export class Room extends THREE.Group {
    */
   tiles = [];
   /**
-   * 
-   * @param {VehicleGraph} size 
+   * @type {PlantsModule}
    */
-  vehicleGraph;
+  #plantsModule;
 
   constructor(width, height, name = 'My Room') {
     super();
@@ -72,10 +70,7 @@ export class Room extends THREE.Group {
     }
 
     this.services = [];
-    this.services.push(new PowerService());
-    
-    this.vehicleGraph = new VehicleGraph(this.width, this.height);
-    this.debugMeshes.add(this.vehicleGraph);
+    this.#plantsModule = new PlantsModule(this);
   }
 
   /**
@@ -154,6 +149,11 @@ export class Room extends THREE.Group {
       if (tile.building.type === BuildingType.road) {
         this.vehicleGraph.updateTile(x, y, tile.building);
       }
+
+      // Atualiza a contagem de plantas se uma planta foi adicionada
+      if (buildingType === 'cannabis-plant') {
+        this.#plantsModule.updatePlantCount();
+      }
     }
   }
 
@@ -166,6 +166,8 @@ export class Room extends THREE.Group {
     const tile = this.getTile(x, y);
 
     if (tile.building) {
+      const wasPlant = tile.building.type === 'cannabis-plant';
+
       if (tile.building.type === BuildingType.road) {
         this.vehicleGraph.updateTile(x, y, null);
       }
@@ -179,11 +181,12 @@ export class Room extends THREE.Group {
       this.getTile(x + 1, y)?.refreshView(this);
       this.getTile(x, y - 1)?.refreshView(this);
       this.getTile(x, y + 1)?.refreshView(this);
-    }
-  }
 
-  draw() {
-    this.vehicleGraph.updateVehicles();
+      // Atualiza a contagem de plantas se uma planta foi removida
+      if (wasPlant) {
+        this.#plantsModule.updatePlantCount();
+      }
+    }
   }
 
   /**
