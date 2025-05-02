@@ -26,7 +26,7 @@
           <span id="angle-label" class="me-2">Angles:</span>
           <span class="me-1">A:</span><span id="angle-azimuth" class="me-2">0°</span>
           <span class="me-1">E:</span><span id="angle-elevation" class="me-2">0°</span>
-          <span class="me-1">R:</span><span id="angle-rotation" class="me-2">0°</span>
+          <!-- <span class="me-1">R:</span><span id="angle-rotation" class="me-2">0°</span> -->
         </div>
         <div class="title-bar-center-items title-bar-items">
           <span id="room-name">My Room</span>
@@ -73,39 +73,58 @@
           </button>
           <div class="dropdown-menu px-2" style="width: 300px;">
             <h5 class="dropdown-header text-center">Tray Configuration:</h5>
-            <div class="d-flex align-items-center justify-content-between">
-              <span>Width:</span>
-              <div class="d-flex">
+            <div class="row">
+              <div class="col-4">Room Grid:</div>
+              <div class="col-3">Columns</div>
+              <div class="col-2"></div>
+              <div class="col-3">Rows</div>
+            </div>
+            <div class="row mb-2">
+              <div class="col-4"></div>
+              <div class="col-3">
                 <input type="number" id="tray-width" class="form-control" min="1" max="10" value="2">
-                <span class="input-group-text" style="min-width: 55px;">tiles</span>
               </div>
-            </div>
-            <div class="d-flex align-items-center justify-content-between">
-              <span>Length:</span>
-              <div class="d-flex">
+              <div class="col-2 text-center">X</div>
+              <div class="col-3">
                 <input type="number" id="tray-length" class="form-control" min="1" max="10" value="2">
-                <span class="input-group-text" style="min-width: 55px;">tiles</span>
               </div>
             </div>
-            <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center justify-content-between mb-2">
               <span>Height:</span>
               <div class="d-flex">
-                <input type="number" id="tray-height" class="form-control" min="1" max="10" value="2">
-                <span class="input-group-text" style="min-width: 55px;">m</span>
+                <input type="number" id="tray-height" class="form-control" min="0.1" max="1.2" value="1" step="0.01">
+                <span class="input-group-text">m</span>
               </div>
             </div>
-            <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center justify-content-between mb-2">
               <span>Wall Height:</span>
               <div class="d-flex">
-                <input type="number" id="tray-wall-height" class="form-control" min="1" max="10" value="1">
-                <span class="input-group-text" style="min-width: 55px;">m</span>
+                <input type="number" id="tray-wall-height" class="form-control" min="0.01" max="0.25" value="0.15" step="0.01">
+                <span class="input-group-text">m</span>
               </div>
             </div>
-            <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center justify-content-between mb-2">
               <span>Wall Thickness:</span>
               <div class="d-flex">
-                <input type="number" id="tray-wall-thickness" class="form-control" min="1" max="10" value="1">
-                <span class="input-group-text" style="min-width: 55px;">m</span>
+                <input type="number" id="tray-wall-thickness" class="form-control" min="0.01" max="0.15" value="0.03" step="0.01">
+                <span class="input-group-text">m</span>
+              </div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="col-4">Inner Grid:</div>
+              <div class="col-3">Columns</div>
+              <div class="col-2"></div>
+              <div class="col-3">Rows</div>
+            </div>
+            <div class="row mb-2">
+              <div class="col-4"></div>
+              <div class="col-3">
+                <input type="number" id="tray-width" class="form-control" min="1" max="10" value="4">
+              </div>
+              <div class="col-2 text-center">X</div>
+              <div class="col-3">
+                <input type="number" id="tray-length" class="form-control" min="1" max="10" value="4">
               </div>
             </div>
           </div>
