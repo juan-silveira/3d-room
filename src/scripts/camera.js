@@ -66,6 +66,19 @@ export class CameraManager {
       this.cameraAzimuth += -(event.movementX * AZIMUTH_SENSITIVITY);
       this.cameraElevation += (event.movementY * ELEVATION_SENSITIVITY);
       this.cameraElevation = Math.min(MAX_CAMERA_ELEVATION, Math.max(MIN_CAMERA_ELEVATION, this.cameraElevation));
+      
+      // Update angle display in UI when camera rotates
+      try {
+        if (window.ui && typeof window.ui.updateAngleDisplay === 'function') {
+          window.ui.updateAngleDisplay(
+            this.cameraAzimuth,
+            this.cameraElevation,
+            0 // Rotação (não temos rotação no eixo z atualmente)
+          );
+        }
+      } catch (error) {
+        console.warn('Erro ao atualizar ângulo na interface:', error);
+      }
     }
 
     // Handles the panning of the camera
@@ -86,6 +99,19 @@ export class CameraManager {
   onMouseScroll(event) {
     this.cameraRadius *= 1 - (event.deltaY * ZOOM_SENSITIVITY);
     this.cameraRadius = Math.min(MAX_CAMERA_RADIUS, Math.max(MIN_CAMERA_RADIUS, this.cameraRadius));
+
+    // Opcional: atualizar o display de ângulos mesmo durante o zoom
+    try {
+      if (window.ui && typeof window.ui.updateAngleDisplay === 'function') {
+        window.ui.updateAngleDisplay(
+          this.cameraAzimuth,
+          this.cameraElevation,
+          0 // Rotação (não temos rotação no eixo z atualmente)
+        );
+      }
+    } catch (error) {
+      console.warn('Erro ao atualizar ângulo na interface:', error);
+    }
 
     this.updateCameraPosition();
   }

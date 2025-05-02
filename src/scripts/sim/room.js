@@ -33,6 +33,36 @@ export class Room extends THREE.Group {
    */
   height = 16;
   /**
+   * Wall height in meters
+   * @type {number}
+   */
+  wallHeight = 3;
+  /**
+   * Wall thickness in meters
+   * @type {number}
+   */
+  wallThickness = 0.2;
+  /**
+   * Walls of the room
+   * @type {THREE.Mesh[]}
+   */
+  walls = [];
+  /**
+   * Double door in the wall
+   * @type {THREE.Group}
+   */
+  door = null;
+  /**
+   * Width of the door in tiles
+   * @type {number}
+   */
+  doorWidth = 2;
+  /**
+   * Position of the door (starting tile)
+   * @type {{x: number, y: number}}
+   */
+  doorPosition = null;
+  /**
    * The current simulation time
    */
   simTime = 0;
@@ -46,12 +76,14 @@ export class Room extends THREE.Group {
    */
   #plantsModule;
 
-  constructor(width, height, name = 'My Room') {
+  constructor(width, height, wallHeight = 3, wallThickness = 0.2, name = 'My Room') {
     super();
 
     this.name = name;
     this.width = width;
     this.height = height;
+    this.wallHeight = wallHeight;
+    this.wallThickness = wallThickness;
     
     this.add(this.debugMeshes);
     this.add(this.root);
@@ -71,6 +103,551 @@ export class Room extends THREE.Group {
 
     this.services = [];
     this.#plantsModule = new PlantsModule(this);
+    
+    // Create walls after tiles
+    this.createWalls();
+  }
+
+  /**
+   * Creates walls around the room
+   */
+  createWalls() {
+    const wallMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.7,
+      metalness: 0.1
+    });
+
+    // Create group for wall elements
+    this.wallGroup = new THREE.Group();
+    this.root.add(this.wallGroup);
+    
+    // Create north wall
+    // Ajustando a largura para incluir a espessura das paredes laterais
+    const northWall = new THREE.Mesh(
+      new THREE.BoxGeometry(this.width + this.wallThickness * 2, this.wallHeight, this.wallThickness),
+      wallMaterial
+    );
+    // Posicionamos exatamente no limite norte, mas expandimos para cobrir as paredes leste e oeste
+    northWall.position.set(this.width / 2 - 0.5, this.wallHeight / 2, - this.wallThickness / 2 - 0.5);
+    northWall.userData.isWall = true;
+    northWall.userData.wallSide = 'north';
+    this.wallGroup.add(northWall);
+    this.walls.push(northWall);
+    
+    // Add label for north wall
+    this.addWallLabel(northWall, 'NORTH', 0xaa0000);
+
+    // Create south wall
+    // Ajustando a largura para incluir a espessura das paredes laterais
+    const southWall = new THREE.Mesh(
+      new THREE.BoxGeometry(this.width + this.wallThickness * 2, this.wallHeight, this.wallThickness),
+      wallMaterial
+    );
+    // Posicionamos exatamente no limite sul, mas expandimos para cobrir as paredes leste e oeste
+    southWall.position.set(this.width / 2 - 0.5, this.wallHeight / 2, this.height + this.wallThickness / 2 - 0.5);
+    southWall.userData.isWall = true;
+    southWall.userData.wallSide = 'south';
+    this.wallGroup.add(southWall);
+    this.walls.push(southWall);
+    
+    // Add label for south wall
+    this.addWallLabel(southWall, 'SOUTH', 0x00aa00);
+
+    // Create east wall
+    // Ajustando o comprimento para considerar apenas o espaço entre as paredes norte e sul
+    const eastWall = new THREE.Mesh(
+      new THREE.BoxGeometry(this.wallThickness, this.wallHeight, this.height + this.wallThickness * 2),
+      wallMaterial
+    );
+    // Posicionamos exatamente no limite leste
+    eastWall.position.set(this.width + this.wallThickness / 2 - 0.5, this.wallHeight / 2, this.height / 2 - 0.5);
+    eastWall.userData.isWall = true;
+    eastWall.userData.wallSide = 'east';
+    this.wallGroup.add(eastWall);
+    this.walls.push(eastWall);
+    
+    // Add label for east wall
+    this.addWallLabel(eastWall, 'EAST', 0x0000aa);
+
+    // Create west wall
+    // Ajustando o comprimento para considerar apenas o espaço entre as paredes norte e sul
+    const westWall = new THREE.Mesh(
+      new THREE.BoxGeometry(this.wallThickness, this.wallHeight, this.height + this.wallThickness * 2),
+      wallMaterial
+    );
+    // Posicionamos exatamente no limite oeste
+    westWall.position.set(-this.wallThickness / 2 - 0.5, this.wallHeight / 2, this.height / 2 - 0.5);
+    westWall.userData.isWall = true;
+    westWall.userData.wallSide = 'west';
+    this.wallGroup.add(westWall);
+    this.walls.push(westWall);
+    
+    // Add label for west wall
+    this.addWallLabel(westWall, 'WEST', 0xaa00aa);
+  }
+  
+  /**
+   * Adiciona um rótulo de texto à parede
+   * @param {THREE.Mesh} wall A parede a ser rotulada
+   * @param {string} text O texto do rótulo
+   * @param {number} color A cor do texto em formato hexadecimal
+   */
+  addWallLabel(wall, text, color) {
+    // Criar canvas para o texto
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = 256;
+    canvas.height = 128;
+    
+    // Configurar estilo do texto
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.font = 'Bold 60px Arial';
+    context.fillStyle = '#' + color.toString(16).padStart(6, '0');
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(text, canvas.width / 2, canvas.height / 2);
+    
+    // Criar textura a partir do canvas
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      side: THREE.DoubleSide
+    });
+    
+    // Criar plano com o texto
+    const labelGeometry = new THREE.PlaneGeometry(1.5, 0.75);
+    const label = new THREE.Mesh(labelGeometry, material);
+    
+    // Posicionar o rótulo de acordo com a parede
+    const side = wall.userData.wallSide;
+    if (side === 'north') {
+      label.position.set(0, this.wallHeight / 2 + 0.5, 0.01);
+      label.rotation.y = Math.PI * 2;
+    } else if (side === 'south') {
+      label.position.set(0, this.wallHeight / 2 + 0.5, 0.01);
+      label.rotation.y = Math.PI;
+    } else if (side === 'east') {
+      label.position.set(0.01, this.wallHeight / 2 + 0.5, 0);
+      label.rotation.y = -Math.PI / 2;
+    } else if (side === 'west') {
+      label.position.set(-0.01, this.wallHeight / 2 + 0.5, 0);
+      label.rotation.y = Math.PI / 2;
+    }
+    
+    wall.add(label);
+    wall.userData.label = label;
+  }
+
+  /**
+   * Places a double door in the wall at the specified position with the specified width
+   * @param {number} x Starting X coordinate
+   * @param {number} y Starting Y coordinate
+   * @param {number} width Width of the door in tiles
+   */
+  placeDoor(x, y, width = 2) {
+    // Remove any existing door
+    if (this.door) {
+      this.door.traverse((obj) => {
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) obj.material.dispose();
+      });
+      this.wallGroup.remove(this.door);
+      this.door = null;
+    }
+
+    this.doorPosition = { x, y };
+    this.doorWidth = width;
+    this.door = new THREE.Group();
+    
+    // Determine which wall to place the door on
+    let wallSide;
+    
+    if (y === 0) {
+      wallSide = 'north';
+    } else if (y === this.height - 1) {
+      wallSide = 'south';
+    } else if (x === 0) {
+      wallSide = 'west';
+    } else if (x === this.width - 1) {
+      wallSide = 'east';
+    } else {
+      console.error('Door must be placed on the edge of the room');
+      return;
+    }
+    
+    // Create materials
+    const doorMaterial = new THREE.MeshStandardMaterial({
+      color: 0xd5d5d5,  // Light gray for the door
+      roughness: 0.5,
+      metalness: 0.3
+    });
+    
+    const metalMaterial = new THREE.MeshStandardMaterial({
+      color: 0x444444,  // Darker metal for push bars
+      roughness: 0.2,
+      metalness: 0.8
+    });
+    
+    const glassMaterial = new THREE.MeshStandardMaterial({
+      color: 0xaaddff,
+      roughness: 0.1,
+      metalness: 0.3,
+      transparent: true,
+      opacity: 0.6
+    });
+    
+    // Door dimensions
+    let doorHeight;
+    if (this.wallHeight < 2.3) {
+      doorHeight = this.wallHeight * 0.9;  // Make doors taller
+    } else {
+      doorHeight = 2.2;  // Standard door height
+    }
+    
+    // Determina se teremos uma ou duas portas
+    const useSingleDoor = width === 1;
+    
+    // Quando width = 1, a porta única ocupa todo o espaço
+    // Quando width >= 2, dividimos o espaço entre duas portas
+    const doorUnitWidth = useSingleDoor ? width : width / 2;
+    
+    const doorThickness = this.wallThickness;  // Same thickness as wall for better visibility
+    
+    // Create a single door panel
+    const createDoorPanel = (isLeft = true, isSingleDoor = false) => {
+      const doorGroup = new THREE.Group();
+      
+      // Calculate panel width - if it's a single door, it has width of 1 tile
+      // Otherwise, each panel has width of (total width/2)
+      const panelWidth = isSingleDoor ? 1 : doorUnitWidth;
+      
+      // Main door panel
+      const doorPanel = new THREE.Mesh(
+        new THREE.BoxGeometry(
+          wallSide === 'north' || wallSide === 'south' ? panelWidth : doorThickness,
+          doorHeight,
+          wallSide === 'north' || wallSide === 'south' ? doorThickness : panelWidth
+        ),
+        doorMaterial
+      );
+      doorGroup.add(doorPanel);
+      
+      // Commercial push bar parameters (horizontal panic bar)
+      const barWidth = (wallSide === 'north' || wallSide === 'south' ? panelWidth : panelWidth) * 0.7;
+      const barHeight = 0.05;
+      const barThickness = 0.05;
+      const barY = - 0.2; // Position at about 40% of door height
+      const barOffset = doorThickness * 0.7;
+      
+      // Adicionar barra antipânico no lado externo
+      const createPushBar = (isExterior) => {
+        const pushBar = new THREE.Mesh(
+          new THREE.BoxGeometry(
+            wallSide === 'north' || wallSide === 'south' ? barWidth : barThickness,
+            barHeight,
+            wallSide === 'north' || wallSide === 'south' ? barThickness : barWidth
+          ),
+          metalMaterial
+        );
+        
+        // Position the bar slightly outside the door, on appropriate side
+        if (wallSide === 'north') {
+          pushBar.position.set(0, barY, isExterior ? barOffset : -barOffset);
+        } else if (wallSide === 'south') {
+          pushBar.position.set(0, barY, isExterior ? -barOffset : barOffset);
+        } else if (wallSide === 'east') {
+          pushBar.position.set(isExterior ? -barOffset : barOffset, barY, 0);
+        } else if (wallSide === 'west') {
+          pushBar.position.set(isExterior ? barOffset : -barOffset, barY, 0);
+        }
+        
+        doorGroup.add(pushBar);
+        
+        // Bar supports (vertical pieces) for each side
+        const supportWidth = 0.04;
+        const supportHeight = 0.2;
+        const supportThickness = 0.04;
+        const supportDistance = barWidth * 0.4;
+        
+        // Left vertical support
+        const leftSupport = new THREE.Mesh(
+          new THREE.BoxGeometry(
+            wallSide === 'north' || wallSide === 'south' ? supportWidth : supportThickness,
+            supportHeight,
+            wallSide === 'north' || wallSide === 'south' ? supportThickness : supportWidth
+          ),
+          metalMaterial
+        );
+        
+        // Right vertical support
+        const rightSupport = leftSupport.clone();
+        
+        // Position the supports
+        if (wallSide === 'north' || wallSide === 'south') {
+          leftSupport.position.set(-supportDistance, barY, isExterior ? barOffset/2 : -barOffset/2);
+          rightSupport.position.set(supportDistance, barY, isExterior ? barOffset/2 : -barOffset/2);
+        } else {
+          leftSupport.position.set(isExterior ? barOffset/2 : -barOffset/2, barY, -supportDistance);
+          rightSupport.position.set(isExterior ? barOffset/2 : -barOffset/2, barY, supportDistance);
+        }
+        
+        doorGroup.add(leftSupport);
+        doorGroup.add(rightSupport);
+      };
+      
+      // Criar barras antipânico em ambos os lados da porta
+      createPushBar(true);  // barra no lado externo
+      createPushBar(false); // barra no lado interno
+      
+      // Window in door
+      const windowWidth = (wallSide === 'north' || wallSide === 'south' ? panelWidth : panelWidth) * 0.7;
+      const windowHeight = doorHeight * 0.4;
+      const windowThickness = doorThickness * 1.1;
+      const windowY = doorHeight * 0.2; // Window position 
+      
+      const doorWindow = new THREE.Mesh(
+        new THREE.BoxGeometry(
+          wallSide === 'north' || wallSide === 'south' ? windowWidth : windowThickness,
+          windowHeight,
+          wallSide === 'north' || wallSide === 'south' ? windowThickness : windowWidth
+        ),
+        glassMaterial
+      );
+      
+      doorWindow.position.set(0, windowY, 0);
+      doorGroup.add(doorWindow);
+      
+      // Door frame (outline)
+      const frameThickness = 0.03;
+      const frameDepth = 0.02;
+      
+      // Create door frame edges
+      if (wallSide === 'north' || wallSide === 'south') {
+        // Top frame
+        const topFrame = new THREE.Mesh(
+          new THREE.BoxGeometry(panelWidth + frameThickness*2, frameThickness, doorThickness + frameDepth*2),
+          metalMaterial
+        );
+        topFrame.position.set(0, doorHeight/2 + frameThickness/2, 0);
+        doorGroup.add(topFrame);
+        
+        // Bottom frame
+        const bottomFrame = new THREE.Mesh(
+          new THREE.BoxGeometry(panelWidth + frameThickness*2, frameThickness, doorThickness + frameDepth*2),
+          metalMaterial
+        );
+        bottomFrame.position.set(0, -doorHeight/2 - frameThickness/2, 0);
+        doorGroup.add(bottomFrame);
+        
+        // Left side frame
+        const leftFrame = new THREE.Mesh(
+          new THREE.BoxGeometry(frameThickness, doorHeight + frameThickness*2, doorThickness + frameDepth*2),
+          metalMaterial
+        );
+        leftFrame.position.set(-panelWidth/2 - frameThickness/2, 0, 0);
+        doorGroup.add(leftFrame);
+        
+        // Right side frame
+        const rightFrame = new THREE.Mesh(
+          new THREE.BoxGeometry(frameThickness, doorHeight + frameThickness*2, doorThickness + frameDepth*2),
+          metalMaterial
+        );
+        rightFrame.position.set(panelWidth/2 + frameThickness/2, 0, 0);
+        doorGroup.add(rightFrame);
+      } else {
+        // Top frame
+        const topFrame = new THREE.Mesh(
+          new THREE.BoxGeometry(doorThickness + frameDepth*2, frameThickness, panelWidth + frameThickness*2),
+          metalMaterial
+        );
+        topFrame.position.set(0, doorHeight/2 + frameThickness/2, 0);
+        doorGroup.add(topFrame);
+        
+        // Bottom frame
+        const bottomFrame = new THREE.Mesh(
+          new THREE.BoxGeometry(doorThickness + frameDepth*2, frameThickness, panelWidth + frameThickness*2),
+          metalMaterial
+        );
+        bottomFrame.position.set(0, -doorHeight/2 - frameThickness/2, 0);
+        doorGroup.add(bottomFrame);
+        
+        // Left side frame
+        const leftFrame = new THREE.Mesh(
+          new THREE.BoxGeometry(doorThickness + frameDepth*2, doorHeight + frameThickness*2, frameThickness),
+          metalMaterial
+        );
+        leftFrame.position.set(0, 0, -panelWidth/2 - frameThickness/2);
+        doorGroup.add(leftFrame);
+        
+        // Right side frame
+        const rightFrame = new THREE.Mesh(
+          new THREE.BoxGeometry(doorThickness + frameDepth*2, doorHeight + frameThickness*2, frameThickness),
+          metalMaterial
+        );
+        rightFrame.position.set(0, 0, panelWidth/2 + frameThickness/2);
+        doorGroup.add(rightFrame);
+      }
+      
+      return doorGroup;
+    };
+    
+    // Get correct wall position from the existing walls
+    let doorWallX, doorWallZ;
+    
+    for (const wall of this.walls) {
+      if (wall.userData.wallSide === wallSide) {
+        if (wallSide === 'north' || wallSide === 'south') {
+          doorWallZ = wall.position.z;
+        } else if (wallSide === 'east' || wallSide === 'west') {
+          doorWallX = wall.position.x;
+        }
+        break;
+      }
+    }
+    
+    const doorPositionY = doorHeight / 2;
+    
+    // Se width = 1, criamos apenas uma porta
+    if (useSingleDoor) {
+      const singleDoor = createDoorPanel(true, true);
+      
+      // Posicionar a porta única exatamente no tile selecionado
+      switch (wallSide) {
+        case 'north':
+        case 'south':
+          // Para norte/sul, centralizamos a porta no meio do tile X
+          singleDoor.position.set(x, doorPositionY, doorWallZ);
+          break;
+        case 'east':
+        case 'west':
+          // Para leste/oeste, centralizamos a porta no meio do tile Y
+          singleDoor.position.set(doorWallX, doorPositionY, y);
+          break;
+      }
+      
+      singleDoor.userData.isDoor = true;
+      this.door.add(singleDoor);
+    }
+    // Se width >= 2, criamos duas portas
+    else {
+      const leftDoor = createDoorPanel(true);
+      const rightDoor = createDoorPanel(false);
+      
+      switch (wallSide) {
+        case 'north':
+        case 'south':
+          // Para norte/sul, posicionamos as duas portas lado a lado ao longo do eixo X
+          // A porta esquerda começa exatamente na coordenada X selecionada
+          leftDoor.position.set(x + doorUnitWidth/2 - 0.5, doorPositionY, doorWallZ);
+          rightDoor.position.set(x + doorUnitWidth + doorUnitWidth/2 - 0.5, doorPositionY, doorWallZ);
+          break;
+        case 'east':
+        case 'west':
+          // Para leste/oeste, posicionamos as duas portas lado a lado ao longo do eixo Z
+          // A porta esquerda começa exatamente na coordenada Y selecionada
+          leftDoor.position.set(doorWallX, doorPositionY, y + doorUnitWidth/2 - 0.5);
+          rightDoor.position.set(doorWallX, doorPositionY, y + doorUnitWidth + doorUnitWidth/2 - 0.5);
+          break;
+      }
+      
+      leftDoor.userData.isDoor = true;
+      rightDoor.userData.isDoor = true;
+      this.door.add(leftDoor);
+      this.door.add(rightDoor);
+    }
+    
+    // Add door to wall group (but don't modify walls)
+    this.wallGroup.add(this.door);
+  }
+
+  /**
+   * Updates the visibility of walls based on camera azimuth
+   * @param {number} cameraAzimuth Camera rotation in degrees
+   * @param {number} cameraElevation Camera elevation in degrees
+   */
+  updateWallVisibility(cameraAzimuth, cameraElevation) {
+    // If elevation is above 60°, show all walls
+    if (cameraElevation > 60) {
+      this.wallGroup.traverse((obj) => {
+        if (obj.userData && obj.userData.isWall) {
+          obj.visible = true;
+          obj.userData.skipRaycast = false;
+        }
+      });
+      
+      // Also show the door if it exists
+      if (this.door) {
+        this.door.visible = true;
+        this.door.traverse(obj => {
+          obj.userData.skipRaycast = false;
+        });
+      }
+      
+      return;
+    }
+    
+    // Normalize angle to 0-360
+    const angle = ((cameraAzimuth % 360) + 360) % 360;
+    
+    // Default to all walls visible
+    this.wallGroup.traverse((obj) => {
+      if (obj.userData && obj.userData.isWall) {
+        obj.visible = true;
+        obj.userData.skipRaycast = false;
+      }
+    });
+    
+    // Identify which walls should be hidden based on angle
+    let hiddenWalls = [];
+    
+    // Rules for exact angles - hide only one specific wall
+    if (Math.abs(angle - 0) < 0.1 || Math.abs(angle - 360) < 0.1) {
+      hiddenWalls = ['south'];
+    } else if (Math.abs(angle - 90) < 0.1) {
+      hiddenWalls = ['east'];
+    } else if (Math.abs(angle - 180) < 0.1) {
+      hiddenWalls = ['north'];
+    } else if (Math.abs(angle - 270) < 0.1) {
+      hiddenWalls = ['west'];
+    }
+    // Rules for angle ranges - hide specific combinations of two walls
+    else if (angle > 0 && angle < 90) {
+      hiddenWalls = ['south', 'east'];
+    } else if (angle > 90 && angle < 180) {
+      hiddenWalls = ['north', 'east'];
+    } else if (angle > 180 && angle < 270) {
+      hiddenWalls = ['north', 'west'];
+    } else if (angle > 270 && angle < 360) {
+      hiddenWalls = ['south', 'west'];
+    }
+    
+    // Apply visibility to walls
+    this.wallGroup.traverse((obj) => {
+      if (obj.userData && obj.userData.isWall) {
+        const side = obj.userData.wallSide;
+        if (hiddenWalls.includes(side)) {
+          obj.visible = false;
+          obj.userData.skipRaycast = true;
+        }
+      }
+    });
+    
+    // Door visibility should match wall visibility
+    if (this.door) {
+      const doorSide = this.doorPosition.y === 0 ? 'north' :
+                     this.doorPosition.y === this.height - 1 ? 'south' :
+                     this.doorPosition.x === 0 ? 'west' : 'east';
+      
+      const doorVisible = !hiddenWalls.includes(doorSide);
+      
+      this.door.visible = doorVisible;
+      this.door.traverse(obj => {
+        obj.userData.skipRaycast = !doorVisible;
+      });
+    }
   }
 
   /**

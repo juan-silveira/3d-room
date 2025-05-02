@@ -38,6 +38,53 @@ export class GameUI {
     return document.getElementById('render-target');
   }
 
+  /**
+   * Get the door width from the UI
+   * @returns {number} Door width in tiles
+   */
+  getDoorWidth() {
+    const widthInput = document.getElementById('door-width');
+    const width = parseInt(widthInput.value, 10);
+    return isNaN(width) ? 2 : Math.max(1, Math.min(width, 4));
+  }
+
+  /**
+   * Updates the camera angle display in the title bar
+   * @param {number} azimuth Ângulo de azimuth em graus
+   * @param {number} elevation Ângulo de elevação em graus
+   * @param {number} rotation Ângulo de rotação em graus (opcional)
+   */
+  updateAngleDisplay(azimuth, elevation, rotation = 0) {
+    // Normalize angles to 0-360 and round to whole number
+    const normalizedAzimuth = Math.round(((azimuth % 360) + 360) % 360);
+    const normalizedElevation = Math.round(((elevation % 360) + 360) % 360);
+    const normalizedRotation = Math.round(((rotation % 360) + 360) % 360);
+    
+    // Atualizar azimuth
+    const azimuthElement = document.getElementById('angle-azimuth');
+    if (azimuthElement) {
+      azimuthElement.textContent = normalizedAzimuth + '°';
+    }
+    
+    // Atualizar elevação
+    const elevationElement = document.getElementById('angle-elevation');
+    if (elevationElement) {
+      elevationElement.textContent = normalizedElevation + '°';
+    }
+    
+    // Atualizar rotação
+    const rotationElement = document.getElementById('angle-rotation');
+    if (rotationElement) {
+      rotationElement.textContent = normalizedRotation + '°';
+    }
+    
+    // Para manter retrocompatibilidade com o código existente
+    const legacyAngleElement = document.getElementById('angle');
+    if (legacyAngleElement) {
+      legacyAngleElement.textContent = normalizedAzimuth + '°';
+    }
+  }
+
   showLoadingText() {
     document.getElementById('loading').style.visibility = 'visible';
   }
@@ -78,6 +125,9 @@ export class GameUI {
     const date = new Date('1/1/2023');
     date.setDate(date.getDate() + game.room.simTime);
     document.getElementById('sim-time').innerHTML = date.toLocaleDateString();
+    
+    // Update angle display
+    this.updateAngleDisplay(game.cameraManager.cameraAzimuth, game.cameraManager.cameraElevation);
   }
 
   /**

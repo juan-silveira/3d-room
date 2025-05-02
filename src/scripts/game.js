@@ -65,7 +65,7 @@ export class Game {
     window.assetManager = new AssetManager(() => {
       window.ui.hideLoadingText();
 
-      this.room = new Room(12, 30);
+      this.room = new Room(12, 30, 3, 0.2);
       this.initialize(this.room);
       this.start();
 
@@ -190,6 +190,24 @@ export class Game {
       this.cameraManager.updateCameraPosition();
     }
     // --- FIM TOUCH CAMERA CONTROLS ---
+    
+    // Update wall visibility based on camera angle
+    if (this.room.wallGroup) {
+      this.room.updateWallVisibility(this.cameraManager.cameraAzimuth, this.cameraManager.cameraElevation);
+    }
+    
+    // Update angle display in UI
+    try {
+      if (window.ui && typeof window.ui.updateAngleDisplay === 'function') {
+        window.ui.updateAngleDisplay(
+          this.cameraManager.cameraAzimuth,
+          this.cameraManager.cameraElevation,
+          0 // Rotação (não temos rotação no eixo z atualmente)
+        );
+      }
+    } catch (error) {
+      console.warn('Erro ao atualizar ângulo na interface:', error);
+    }
 
     this.updateFocusedObject();
 
@@ -226,6 +244,18 @@ export class Game {
         if (this.focusedObject) {
           const { x, y } = this.focusedObject;
           this.room.trash(x, y);
+        }
+        break;
+      case 'double-door':
+        if (this.focusedObject) {
+          const { x, y } = this.focusedObject;
+          // Check if the tile is at the edge of the room
+          if (x === 0 || x === this.room.width - 1 || y === 0 || y === this.room.height - 1) {
+            const doorWidth = window.ui.getDoorWidth();
+            this.room.placeDoor(x, y, doorWidth);
+          } else {
+            console.warn('Doors can only be placed on the edge of the room');
+          }
         }
         break;
       default:
@@ -279,7 +309,15 @@ export class Game {
 
     this.raycaster.setFromCamera(coords, this.cameraManager.camera);
 
-    let intersections = this.raycaster.intersectObjects(this.room.root.children, true);
+    // Filter out objects marked to skip raycast (hidden walls)
+    let targets = [];
+    this.room.root.traverse(object => {
+      if (object.isMesh && (!object.userData || !object.userData.skipRaycast)) {
+        targets.push(object);
+      }
+    });
+
+    let intersections = this.raycaster.intersectObjects(targets, false);
     if (intersections.length > 0) {
       // Get the first intersection and find its parent Object
       let current = intersections[0].object;

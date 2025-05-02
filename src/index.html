@@ -20,21 +20,27 @@
         LOADING...
       </div>
     </div>
-    <div id="paused-text" class="text-overlay" style="visibility: hidden;">
-      <div>
-        PAUSED
-      </div>
-    </div>
     <div id="ui">
       <div id="title-bar">
         <div class="title-bar-left-items title-bar-items">
+          <span id="angle-label" class="me-2">Angles:</span>
+          <span class="me-1">A:</span><span id="angle-azimuth" class="me-2">0°</span>
+          <span class="me-1">E:</span><span id="angle-elevation" class="me-2">0°</span>
+          <span class="me-1">R:</span><span id="angle-rotation" class="me-2">0°</span>
         </div>
         <div class="title-bar-center-items title-bar-items">
           <span id="room-name">My Room</span>
         </div>
         <div class="title-bar-right-items title-bar-items">
-          <img id="plants-icon" src="/icons/cannabis-plant.png" style="width: 20px; height: 20px;">
-          <span id="plants-counter">0</span>
+          <div class="d-flex align-items-center">
+            <img id="tray-icon" src="/icons/tray.png" style="width: 20px; height: 20px;">
+            <span id="tray-counter" class="ms-2">0</span>
+          </div>
+          <div class="mx-3"></div>
+          <div class="d-flex align-items-center">
+            <img id="plants-icon" src="/icons/cannabis-plant.png" style="width: 20px; height: 20px;">
+            <span id="plants-counter" class="ms-2">0</span>
+          </div>
         </div>
       </div>
       <div id="ui-toolbar" class="side-menu">
@@ -52,6 +58,76 @@
           onclick="ui.onToolSelected(event)">
           <img class="toolbar-icon" src="/icons/cannabis-plant.png">
         </button>
+        <button id='button-tray' class="ui-button" data-type="tray"
+          onclick="ui.onToolSelected(event)">
+          <img class="toolbar-icon" src="/icons/tray.png">
+        </button>
+        <button id='button-double-door' class="ui-button" data-type="double-door"
+          onclick="ui.onToolSelected(event)">
+          <img class="toolbar-icon" src="/icons/door.png">
+        </button>
+        <div style="margin-top: 10px;color: white;">Tray:</div>
+        <div class="dropdown">
+          <button class="ui-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <img class="toolbar-icon" src="/icons/tray.png">
+          </button>
+          <div class="dropdown-menu px-2" style="width: 300px;">
+            <h5 class="dropdown-header text-center">Tray Configuration:</h5>
+            <div class="d-flex align-items-center justify-content-between">
+              <span>Width:</span>
+              <div class="d-flex">
+                <input type="number" id="tray-width" class="form-control" min="1" max="10" value="2">
+                <span class="input-group-text" style="min-width: 55px;">tiles</span>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <span>Length:</span>
+              <div class="d-flex">
+                <input type="number" id="tray-length" class="form-control" min="1" max="10" value="2">
+                <span class="input-group-text" style="min-width: 55px;">tiles</span>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <span>Height:</span>
+              <div class="d-flex">
+                <input type="number" id="tray-height" class="form-control" min="1" max="10" value="2">
+                <span class="input-group-text" style="min-width: 55px;">m</span>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <span>Wall Height:</span>
+              <div class="d-flex">
+                <input type="number" id="tray-wall-height" class="form-control" min="1" max="10" value="1">
+                <span class="input-group-text" style="min-width: 55px;">m</span>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <span>Wall Thickness:</span>
+              <div class="d-flex">
+                <input type="number" id="tray-wall-thickness" class="form-control" min="1" max="10" value="1">
+                <span class="input-group-text" style="min-width: 55px;">m</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 10px;color: white;">Door Size:</div>
+        <div class="dropdown">
+          <button class="ui-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <img class="toolbar-icon" src="/icons/door.png">
+          </button>
+          <div class="dropdown-menu px-2" style="width: 300px;">
+            <h5 class="dropdown-header text-center">Door Configuration:</h5>
+            <div class="d-flex align-items-center justify-content-between">
+              <span>Door Width:</span>
+              <div class="d-flex">
+                <input type="number" id="door-width" class="form-control" min="1" max="4" value="2">
+                <span class="input-group-text" style="min-width: 55px;">tiles</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div style="margin-top: 10px;color: white;">Terrain:</div>
         <div class="dropdown">
           <button class="ui-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
