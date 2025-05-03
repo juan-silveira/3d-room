@@ -1,5 +1,8 @@
 import { Game } from './game';
 import { Object } from './sim/object';
+import { Pot } from './sim/buildings/objects/pot.js';
+import { Slab } from './sim/buildings/objects/slab.js';
+import { Tray } from './sim/buildings/objects/tray.js';
 
 export class GameUI {
   /**
@@ -46,6 +49,66 @@ export class GameUI {
     const widthInput = document.getElementById('door-width');
     const width = parseInt(widthInput.value, 10);
     return isNaN(width) ? 2 : Math.max(1, Math.min(width, 4));
+  }
+
+  /**
+   * Get pot configuration from the UI
+   * @returns {Object} Pot configuration object
+   */
+  getPotConfig() {
+    // Get pot shape
+    const shapeRound = document.getElementById('pot-shape-round');
+    const shape = shapeRound.checked ? 'round' : 'square';
+    
+    // Get dimensions
+    const height = parseFloat(document.getElementById('pot-height').value);
+    const topDiameter = parseFloat(document.getElementById('pot-top-diameter').value);
+    const bottomDiameter = parseFloat(document.getElementById('pot-bottom-diameter').value);
+    
+    return {
+      shape,
+      height: isNaN(height) ? 0.3 : Math.max(0.1, Math.min(height, 0.5)),
+      topDiameter: isNaN(topDiameter) ? 0.25 : Math.max(0.1, Math.min(topDiameter, 0.3)),
+      bottomDiameter: isNaN(bottomDiameter) ? 0.2 : Math.max(0.1, Math.min(bottomDiameter, 0.3))
+    };
+  }
+
+  /**
+   * Get slab configuration from the UI
+   * @returns {Object} Slab configuration object
+   */
+  getSlabConfig() {
+    // Get dimensions
+    const length = parseInt(document.getElementById('slab-length').value, 10);
+    const height = parseFloat(document.getElementById('slab-height').value);
+    
+    return {
+      length: isNaN(length) ? 1 : Math.max(1, Math.min(length, 5)),
+      height: isNaN(height) ? 0.1 : Math.max(0.05, Math.min(height, 0.2))
+    };
+  }
+
+  /**
+   * Get tray configuration from the UI
+   * @returns {Object} Tray configuration object
+   */
+  getTrayConfig() {
+    // Get dimensions
+    const width = parseInt(document.getElementById('tray-width').value, 10);
+    const length = parseInt(document.getElementById('tray-length').value, 10);
+    const legHeight = parseFloat(document.getElementById('tray-leg-height').value);
+    const topThickness = parseFloat(document.getElementById('tray-top-thickness').value);
+    const edgeHeight = parseFloat(document.getElementById('tray-edge-height').value);
+    const edgeThickness = parseFloat(document.getElementById('tray-edge-thickness').value);
+    
+    return {
+      width: isNaN(width) ? 4 : Math.max(2, Math.min(width, 20)),
+      length: isNaN(length) ? 4 : Math.max(2, Math.min(length, 100)),
+      legHeight: isNaN(legHeight) ? 0.8 : Math.max(0.5, Math.min(legHeight, 1.5)),
+      topThickness: isNaN(topThickness) ? 0.05 : Math.max(0.01, Math.min(topThickness, 0.1)),
+      edgeHeight: isNaN(edgeHeight) ? 0.1 : Math.max(0.05, Math.min(edgeHeight, 0.2)),
+      edgeThickness: isNaN(edgeThickness) ? 0.03 : Math.max(0.01, Math.min(edgeThickness, 0.05))
+    };
   }
 
   /**
@@ -128,6 +191,46 @@ export class GameUI {
     
     // Update angle display
     this.updateAngleDisplay(game.cameraManager.cameraAzimuth, game.cameraManager.cameraElevation);
+  }
+
+  /**
+   * Configures a pot object based on UI settings
+   * @param {Pot} pot The pot object to configure
+   */
+  configurePot(pot) {
+    const config = this.getPotConfig();
+    pot.shape = config.shape;
+    pot.height = config.height;
+    pot.topDiameter = config.topDiameter;
+    pot.bottomDiameter = config.bottomDiameter;
+    pot.refreshView();
+  }
+
+  /**
+   * Configures a slab object based on UI settings
+   * @param {Slab} slab The slab object to configure
+   */
+  configureSlab(slab) {
+    const config = this.getSlabConfig();
+    slab.length = config.length;
+    slab.height = config.height;
+    slab.refreshView();
+  }
+
+  /**
+   * Configures a tray object based on UI settings
+   * @param {Tray} tray The tray object to configure
+   */
+  configureTray(tray) {
+    const config = this.getTrayConfig();
+    tray.width = config.width;
+    tray.length = config.length;
+    tray.legHeight = config.legHeight;
+    tray.topThickness = config.topThickness;
+    tray.edgeHeight = config.edgeHeight;
+    tray.edgeThickness = config.edgeThickness;
+    tray.initializeTiles(); // Recreate tiles grid with new dimensions
+    tray.refreshView();
   }
 
   /**

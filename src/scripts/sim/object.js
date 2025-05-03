@@ -2,6 +2,8 @@ import * as THREE from 'three';
 
 const SELECTED_COLOR = 0xaaaa55;
 const HIGHLIGHTED_COLOR = 0x555555;
+const HIGHLIGHT_GREEN = 0x00FF00;  // Green highlight for valid placements
+const HIGHLIGHT_RED = 0xFF0000;    // Red highlight for invalid placements
 
 export class Object extends THREE.Object3D {
   /**
@@ -76,9 +78,16 @@ export class Object extends THREE.Object3D {
     }
   }
 
-  setFocused(value) {
+  /**
+   * Sets the focused state of the object
+   * @param {boolean} value Whether the object is focused
+   * @param {number} color Optional custom highlight color
+   */
+  setFocused(value, color) {
     if (value) {
-      this.#setMeshEmission(HIGHLIGHTED_COLOR);
+      // Use the provided color, or the default highlight color
+      const highlightColor = color || HIGHLIGHTED_COLOR;
+      this.#setMeshEmission(highlightColor);
     } else {
       this.#setMeshEmission(0);
     }

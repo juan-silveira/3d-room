@@ -25,7 +25,13 @@ export class AssetManager {
     this.loadedModelCount = 0;
 
     for (const [name, meta] of Object.entries(models)) {
-      this.#loadModel(name, meta);
+      if (meta.procedural) {
+        // Just create a placeholder for procedural models
+        this.models[name] = new THREE.Group();
+        this.loadedModelCount++;
+      } else {
+        this.#loadModel(name, meta);
+      }
     }
 
     this.onLoad = onLoad;

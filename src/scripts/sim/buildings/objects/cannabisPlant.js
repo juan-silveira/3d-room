@@ -1,5 +1,6 @@
 import { Building } from '../building.js';
 import { BuildingType } from '../buildingType.js';
+import { TILE_SCALE, metersToTileUnits } from '../../constants.js';
 
 export class CannabisPlant extends Building {
   /**
@@ -15,6 +16,8 @@ export class CannabisPlant extends Building {
 
   refreshView() {
     let mesh = window.assetManager.getModel(this.type, this);
+    // Adjust scale to look proportional on top of containers
+    mesh.scale.set(0.8, 0.8, 0.8);
     this.setMesh(mesh);
   }
 

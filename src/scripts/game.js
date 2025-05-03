@@ -5,6 +5,11 @@ import { InputManager } from './input.js';
 import { Room } from './sim/room.js';
 import { Object } from './sim/object.js';
 import { Tile } from './sim/tile.js';
+import { Pot } from './sim/buildings/objects/pot.js';
+import { Slab } from './sim/buildings/objects/slab.js';
+import { Tray } from './sim/buildings/objects/tray.js';
+import { CannabisPlant } from './sim/buildings/objects/cannabisPlant.js';
+import { TILE_SCALE, metersToTileUnits } from './sim/constants.js';
 
 /** 
  * Manager for the Three.js scene. Handles rendering of a `Room` object
@@ -35,6 +40,7 @@ export class Game {
    */
   selectedTile = null;
   _lastTouch = { x: null, y: null, dist: null };
+  highlightedTiles = [];
 
   constructor(room) {
     this.room = room;
@@ -65,7 +71,8 @@ export class Game {
     window.assetManager = new AssetManager(() => {
       window.ui.hideLoadingText();
 
-      this.room = new Room(12, 30, 3, 0.2);
+      // Create room with the specified grid size: 36 x 280 tiles
+      this.room = new Room(36, 280, 3, 0.2);
       this.initialize(this.room);
       this.start();
 
@@ -232,6 +239,87 @@ export class Game {
   }
 
   /**
+   * Sets the object that is currently highlighted
+   */
+  updateFocusedObject() {  
+    this.focusedObject?.setFocused(false);
+    
+    const newObject = this.#raycast();
+    
+    // Reset previously highlighted objects for multi-tile objects
+    if (this.highlightedTiles) {
+      for (const tile of this.highlightedTiles) {
+        tile.setFocused(false);
+      }
+      this.highlightedTiles = [];
+    }
+    
+    // If we're placing a multi-tile object (tray, slab), highlight all affected tiles
+    if (newObject && window.ui.activeToolId) {
+      if (window.ui.activeToolId === 'tray' && newObject instanceof Tile) {
+        const { x, y } = newObject;
+        const config = window.ui.getTrayConfig();
+        this.highlightedTiles = [];
+        
+        // Check if all required tiles are available
+        let allTilesAvailable = true;
+        for (let dx = 0; dx < config.width; dx++) {
+          for (let dy = 0; dy < config.length; dy++) {
+            const checkX = x + dx;
+            const checkY = y + dy;
+            const checkTile = this.room.getTile(checkX, checkY);
+            
+            if (!checkTile || checkTile.building) {
+              allTilesAvailable = false;
+            } else if (checkTile) {
+              this.highlightedTiles.push(checkTile);
+            }
+          }
+        }
+        
+        // Highlight all tiles with appropriate color
+        for (const tile of this.highlightedTiles) {
+          tile.setFocused(true, allTilesAvailable ? 0x00FF00 : 0xFF0000);
+        }
+      } else if (window.ui.activeToolId === 'slab' && 
+                 newObject.parent?.userData?.instance?.type === 'tray') {
+        // Handle slab highlighting on a tray
+        const tray = newObject.parent.userData.instance;
+        const trayTile = newObject;
+        const config = window.ui.getSlabConfig();
+        this.highlightedTiles = [];
+        
+        // Check if there's enough space for the slab
+        let spaceAvailable = true;
+        for (let i = 0; i < config.length; i++) {
+          const checkY = trayTile.y + i;
+          const checkTile = tray.getTile(trayTile.x, checkY);
+          if (!checkTile || checkY >= tray.length || checkTile.building) {
+            spaceAvailable = false;
+            break;
+          } else {
+            this.highlightedTiles.push(checkTile);
+          }
+        }
+        
+        // Highlight all tiles with appropriate color
+        for (const tile of this.highlightedTiles) {
+          tile.setFocused(true, spaceAvailable ? 0x00FF00 : 0xFF0000);
+        }
+      }
+    }
+    
+    if (newObject !== this.focusedObject) {
+      this.focusedObject = newObject;
+    }
+    
+    // Only set the focused state for individual objects if we're not showing multi-tile highlights
+    if (this.focusedObject && (!this.highlightedTiles || this.highlightedTiles.length === 0)) {
+      this.focusedObject.setFocused(true);
+    }
+  }
+
+  /**
    * Uses the currently active tool
    */
   useTool() {
@@ -258,6 +346,129 @@ export class Game {
           }
         }
         break;
+      case 'pot':
+        if (this.focusedObject) {
+          // Check if we're placing on a room tile
+          if (this.focusedObject instanceof Tile && this.focusedObject.parent === this.room.root) {
+            const { x, y } = this.focusedObject;
+            // Allow placing pot on empty room tile
+            if (!this.focusedObject.building) {
+              // Check if this tile is in a tray (not allowed)
+              const isTileInTray = false; // We know this is a direct room tile
+              
+              if (!isTileInTray) {
+                this.room.placeBuilding(x, y, 'pot');
+                
+                // Configure the pot after placing it
+                const tile = this.room.getTile(x, y);
+                if (tile && tile.building && tile.building.type === 'pot') {
+                  window.ui.configurePot(tile.building);
+                }
+              }
+            }
+          } 
+          // Check if we're placing on a tray tile
+          else if (this.focusedObject.parent?.userData?.instance?.type === 'tray') {
+            const tray = this.focusedObject.parent.userData.instance;
+            const trayTile = this.focusedObject;
+            
+            // Add pot to the tray tile
+            if (!trayTile.building) {
+              const pot = new Pot(0, 0);
+              window.ui.configurePot(pot);
+              tray.placeBuilding(trayTile.x, trayTile.y, pot);
+            }
+          }
+        }
+        break;
+      case 'slab':
+        if (this.focusedObject && this.highlightedTiles && this.highlightedTiles.length > 0) {
+          // Only place on tray tiles
+          if (this.focusedObject.parent?.userData?.instance?.type === 'tray') {
+            const tray = this.focusedObject.parent.userData.instance;
+            const trayTile = this.focusedObject;
+            
+            // Check if there's enough space for the slab (already checked in updateFocusedObject)
+            const spaceAvailable = this.highlightedTiles.every(tile => !tile.building);
+            
+            if (spaceAvailable) {
+              const config = window.ui.getSlabConfig();
+              const slab = new Slab(0, 0, config.length);
+              slab.height = config.height;
+              tray.placeBuilding(trayTile.x, trayTile.y, slab);
+            }
+          }
+        }
+        break;
+      case 'tray':
+        if (this.focusedObject && this.highlightedTiles && this.highlightedTiles.length > 0) {
+          const { x, y } = this.focusedObject;
+          
+          // Check if all required tiles are available (already checked in updateFocusedObject)
+          const allTilesAvailable = this.highlightedTiles.every(tile => !tile.building);
+          
+          if (allTilesAvailable) {
+            const config = window.ui.getTrayConfig();
+            
+            // Place the tray
+            this.room.placeBuilding(x, y, 'tray');
+            
+            // Configure the tray after placing it
+            const tile = this.room.getTile(x, y);
+            if (tile && tile.building && tile.building.type === 'tray') {
+              const tray = tile.building;
+              tray.width = config.width;
+              tray.length = config.length;
+              tray.legHeight = config.legHeight;
+              tray.topThickness = config.topThickness;
+              tray.edgeHeight = config.edgeHeight;
+              tray.edgeThickness = config.edgeThickness;
+              tray.initializeTiles();
+              tray.refreshView();
+            }
+          } else {
+            console.warn('Not enough space for the tray or it would overlap with another object');
+          }
+        }
+        break;
+      case 'cannabis-plant':
+        if (this.focusedObject) {
+          // Check if we're placing directly on a pot
+          if (this.focusedObject.building?.type === 'pot') {
+            const pot = this.focusedObject.building;
+            if (!pot.plant) {
+              const plant = new CannabisPlant(0, 0);
+              plant.refreshView(); // Ensure plant has its mesh before adding
+              pot.setPlant(plant);
+            }
+          }
+          // Check if we're placing on a pot that's on a tray
+          else if (this.focusedObject.building?.type === 'pot' && 
+                   this.focusedObject.parent?.userData?.instance?.type === 'tray') {
+            const pot = this.focusedObject.building;
+            if (!pot.plant) {
+              const plant = new CannabisPlant(0, 0);
+              plant.refreshView(); // Ensure plant has its mesh before adding
+              pot.setPlant(plant);
+            }
+          }
+          // Check if we're placing on a slab
+          else if (this.focusedObject.building?.type === 'slab') {
+            const slab = this.focusedObject.building;
+            // Determine position on the slab
+            const localY = this.focusedObject.y - slab.y;
+            if (localY >= 0 && localY < slab.length && !slab.plants[localY]) {
+              const plant = new CannabisPlant(0, 0);
+              plant.refreshView(); // Ensure plant has its mesh before adding
+              slab.setPlant(plant, localY);
+            }
+          }
+          // Do not allow direct placement on a room tile or a tray
+          else if (this.focusedObject instanceof Tile) {
+            console.warn('Cannabis plants can only be placed in pots or on slabs');
+          }
+        }
+        break;
       default:
         if (this.focusedObject) {
           const { x, y } = this.focusedObject;
@@ -281,18 +492,6 @@ export class Game {
     } else {
       this.selectedTile = null;
     }
-  }
-
-  /**
-   * Sets the object that is currently highlighted
-   */
-  updateFocusedObject() {  
-    this.focusedObject?.setFocused(false);
-    const newObject = this.#raycast();
-    if (newObject !== this.focusedObject) {
-      this.focusedObject = newObject;
-    }
-    this.focusedObject?.setFocused(true);
   }
 
   /**

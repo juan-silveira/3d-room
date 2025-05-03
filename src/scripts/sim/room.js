@@ -4,6 +4,7 @@ import { createBuilding } from './buildings/buildingObjects.js';
 import { Tile } from './tile.js';
 import { Service } from './services/service.js';
 import { PlantsModule } from './buildings/modules/plants.js';
+import { TILE_SCALE, metersToTileUnits } from './constants.js';
 
 export class Room extends THREE.Group {
   /**
@@ -82,8 +83,9 @@ export class Room extends THREE.Group {
     this.name = name;
     this.width = width;
     this.height = height;
-    this.wallHeight = wallHeight;
-    this.wallThickness = wallThickness;
+    // Convert meters to tile units
+    this.wallHeight = metersToTileUnits(wallHeight);
+    this.wallThickness = metersToTileUnits(wallThickness);
     
     this.add(this.debugMeshes);
     this.add(this.root);
@@ -93,7 +95,7 @@ export class Room extends THREE.Group {
       const column = [];
       for (let y = 0; y < this.height; y++) {
         const tile = new Tile(x, y);
-        tile.setBuilding(createBuilding(x, y, 'cannabis-plant'));
+        tile.setBuilding(null); // Don't initialize with plants
         tile.refreshView(this);
         this.root.add(tile);
         column.push(tile);
@@ -123,12 +125,12 @@ export class Room extends THREE.Group {
     this.root.add(this.wallGroup);
     
     // Create north wall
-    // Ajustando a largura para incluir a espessura das paredes laterais
+    // Adjust width to include thickness of side walls
     const northWall = new THREE.Mesh(
       new THREE.BoxGeometry(this.width + this.wallThickness * 2, this.wallHeight, this.wallThickness),
       wallMaterial
     );
-    // Posicionamos exatamente no limite norte, mas expandimos para cobrir as paredes leste e oeste
+    // Position exactly on north edge, expanded to cover east and west walls
     northWall.position.set(this.width / 2 - 0.5, this.wallHeight / 2, - this.wallThickness / 2 - 0.5);
     northWall.userData.isWall = true;
     northWall.userData.wallSide = 'north';
@@ -139,12 +141,12 @@ export class Room extends THREE.Group {
     this.addWallLabel(northWall, 'NORTH', 0xaa0000);
 
     // Create south wall
-    // Ajustando a largura para incluir a espessura das paredes laterais
+    // Adjust width to include thickness of side walls
     const southWall = new THREE.Mesh(
       new THREE.BoxGeometry(this.width + this.wallThickness * 2, this.wallHeight, this.wallThickness),
       wallMaterial
     );
-    // Posicionamos exatamente no limite sul, mas expandimos para cobrir as paredes leste e oeste
+    // Position exactly on south edge, expanded to cover east and west walls
     southWall.position.set(this.width / 2 - 0.5, this.wallHeight / 2, this.height + this.wallThickness / 2 - 0.5);
     southWall.userData.isWall = true;
     southWall.userData.wallSide = 'south';
@@ -155,12 +157,12 @@ export class Room extends THREE.Group {
     this.addWallLabel(southWall, 'SOUTH', 0x00aa00);
 
     // Create east wall
-    // Ajustando o comprimento para considerar apenas o espaço entre as paredes norte e sul
+    // Adjust length to consider space between north and south walls
     const eastWall = new THREE.Mesh(
       new THREE.BoxGeometry(this.wallThickness, this.wallHeight, this.height + this.wallThickness * 2),
       wallMaterial
     );
-    // Posicionamos exatamente no limite leste
+    // Position exactly on east edge
     eastWall.position.set(this.width + this.wallThickness / 2 - 0.5, this.wallHeight / 2, this.height / 2 - 0.5);
     eastWall.userData.isWall = true;
     eastWall.userData.wallSide = 'east';
@@ -171,12 +173,12 @@ export class Room extends THREE.Group {
     this.addWallLabel(eastWall, 'EAST', 0x0000aa);
 
     // Create west wall
-    // Ajustando o comprimento para considerar apenas o espaço entre as paredes norte e sul
+    // Adjust length to consider space between north and south walls
     const westWall = new THREE.Mesh(
       new THREE.BoxGeometry(this.wallThickness, this.wallHeight, this.height + this.wallThickness * 2),
       wallMaterial
     );
-    // Posicionamos exatamente no limite oeste
+    // Position exactly on west edge
     westWall.position.set(-this.wallThickness / 2 - 0.5, this.wallHeight / 2, this.height / 2 - 0.5);
     westWall.userData.isWall = true;
     westWall.userData.wallSide = 'west';
@@ -302,9 +304,9 @@ export class Room extends THREE.Group {
     // Door dimensions
     let doorHeight;
     if (this.wallHeight < 2.3) {
-      doorHeight = this.wallHeight * 0.9;  // Make doors taller
+      doorHeight = this.wallHeight * 0.9;  // Make doors shorter than wall
     } else {
-      doorHeight = 2.2;  // Standard door height
+      doorHeight = metersToTileUnits(2.2);  // Standard door height converted to tile units
     }
     
     // Determina se teremos uma ou duas portas
@@ -337,9 +339,9 @@ export class Room extends THREE.Group {
       
       // Commercial push bar parameters (horizontal panic bar)
       const barWidth = (wallSide === 'north' || wallSide === 'south' ? panelWidth : panelWidth) * 0.7;
-      const barHeight = 0.05;
-      const barThickness = 0.05;
-      const barY = - 0.2; // Position at about 40% of door height
+      const barHeight = metersToTileUnits(0.05);
+      const barThickness = metersToTileUnits(0.05);
+      const barY = doorHeight * (-0.4); // Position at about 40% of door height
       const barOffset = doorThickness * 0.7;
       
       // Adicionar barra antipânico no lado externo
@@ -367,9 +369,9 @@ export class Room extends THREE.Group {
         doorGroup.add(pushBar);
         
         // Bar supports (vertical pieces) for each side
-        const supportWidth = 0.04;
-        const supportHeight = 0.2;
-        const supportThickness = 0.04;
+        const supportWidth = metersToTileUnits(0.04);
+        const supportHeight = metersToTileUnits(0.2);
+        const supportThickness = metersToTileUnits(0.04);
         const supportDistance = barWidth * 0.4;
         
         // Left vertical support
@@ -421,8 +423,8 @@ export class Room extends THREE.Group {
       doorGroup.add(doorWindow);
       
       // Door frame (outline)
-      const frameThickness = 0.03;
-      const frameDepth = 0.02;
+      const frameThickness = metersToTileUnits(0.03);
+      const frameDepth = metersToTileUnits(0.02);
       
       // Create door frame edges
       if (wallSide === 'north' || wallSide === 'south') {
