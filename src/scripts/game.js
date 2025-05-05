@@ -72,7 +72,7 @@ export class Game {
       window.ui.hideLoadingText();
 
       // Create room with the specified grid size: 36 x 280 tiles
-      this.room = new Room(36, 280, 3, 0.2);
+      this.room = new Room(36, 280, 3, 0.06);
       this.initialize(this.room);
       this.start();
 
@@ -242,14 +242,19 @@ export class Game {
    * Sets the object that is currently highlighted
    */
   updateFocusedObject() {  
-    this.focusedObject?.setFocused(false);
+    // Important: First check if the focused object has the setFocused method
+    if (this.focusedObject && typeof this.focusedObject.setFocused === 'function') {
+      this.focusedObject.setFocused(false);
+    }
     
     const newObject = this.#raycast();
     
     // Reset previously highlighted objects for multi-tile objects
-    if (this.highlightedTiles) {
+    if (this.highlightedTiles && this.highlightedTiles.length > 0) {
       for (const tile of this.highlightedTiles) {
-        tile.setFocused(false);
+        if (tile && typeof tile.setFocused === 'function') {
+          tile.setFocused(false);
+        }
       }
       this.highlightedTiles = [];
     }
@@ -261,8 +266,10 @@ export class Game {
         const config = window.ui.getTrayConfig();
         this.highlightedTiles = [];
         
-        // Check if all required tiles are available
+        // Check if all required tiles are available and don't overlap with existing trays
         let allTilesAvailable = true;
+        let trayOverlap = false;
+        
         for (let dx = 0; dx < config.width; dx++) {
           for (let dy = 0; dy < config.length; dy++) {
             const checkX = x + dx;
@@ -274,12 +281,35 @@ export class Game {
             } else if (checkTile) {
               this.highlightedTiles.push(checkTile);
             }
+            
+            // Check for overlap with existing trays
+            for (let sx = Math.max(0, checkX - 20); sx <= Math.min(this.room.width - 1, checkX + 20); sx++) {
+              for (let sy = Math.max(0, checkY - 20); sy <= Math.min(this.room.height - 1, checkY + 20); sy++) {
+                const surroundingTile = this.room.getTile(sx, sy);
+                
+                if (surroundingTile && surroundingTile.building && surroundingTile.building.type === 'tray') {
+                  const existingTray = surroundingTile.building;
+                  
+                  // Check if the existing tray extends to the current position
+                  if (checkX >= sx && checkX < sx + existingTray.width &&
+                      checkY >= sy && checkY < sy + existingTray.length) {
+                    trayOverlap = true;
+                    break;
+                  }
+                }
+              }
+              if (trayOverlap) break;
+            }
+            if (trayOverlap) break;
           }
+          if (trayOverlap) break;
         }
         
         // Highlight all tiles with appropriate color
         for (const tile of this.highlightedTiles) {
-          tile.setFocused(true, allTilesAvailable ? 0x00FF00 : 0xFF0000);
+          if (tile && typeof tile.setFocused === 'function') {
+            tile.setFocused(true, (allTilesAvailable && !trayOverlap) ? 0x00FF00 : 0xFF0000);
+          }
         }
       } else if (window.ui.activeToolId === 'slab' && 
                  newObject.parent?.userData?.instance?.type === 'tray') {
@@ -304,7 +334,9 @@ export class Game {
         
         // Highlight all tiles with appropriate color
         for (const tile of this.highlightedTiles) {
-          tile.setFocused(true, spaceAvailable ? 0x00FF00 : 0xFF0000);
+          if (tile && typeof tile.setFocused === 'function') {
+            tile.setFocused(true, spaceAvailable ? 0x00FF00 : 0xFF0000);
+          }
         }
       }
     }
@@ -315,7 +347,9 @@ export class Game {
     
     // Only set the focused state for individual objects if we're not showing multi-tile highlights
     if (this.focusedObject && (!this.highlightedTiles || this.highlightedTiles.length === 0)) {
-      this.focusedObject.setFocused(true);
+      if (typeof this.focusedObject.setFocused === 'function') {
+        this.focusedObject.setFocused(true);
+      }
     }
   }
 
@@ -351,15 +385,12 @@ export class Game {
           // Check if we're placing on a room tile
           if (this.focusedObject instanceof Tile && this.focusedObject.parent === this.room.root) {
             const { x, y } = this.focusedObject;
-            // Allow placing pot on empty room tile
+            // Allow placing pot on empty room tile only if no trays exist
             if (!this.focusedObject.building) {
-              // Check if this tile is in a tray (not allowed)
-              const isTileInTray = false; // We know this is a direct room tile
+              const placementResult = this.room.placeBuilding(x, y, 'pot');
               
-              if (!isTileInTray) {
-                this.room.placeBuilding(x, y, 'pot');
-                
-                // Configure the pot after placing it
+              // Configure the pot after placing it
+              if (placementResult) {
                 const tile = this.room.getTile(x, y);
                 if (tile && tile.building && tile.building.type === 'pot') {
                   window.ui.configurePot(tile.building);
@@ -368,34 +399,127 @@ export class Game {
             }
           } 
           // Check if we're placing on a tray tile
-          else if (this.focusedObject.parent?.userData?.instance?.type === 'tray') {
-            const tray = this.focusedObject.parent.userData.instance;
-            const trayTile = this.focusedObject;
+          else if (this.focusedObject instanceof Tile) {
+            // If it's a tile and not from the room, it must be from a tray
+            // Find the parent tray by looking at the userData or parent chain
+            let tray = null;
             
-            // Add pot to the tray tile
-            if (!trayTile.building) {
-              const pot = new Pot(0, 0);
-              window.ui.configurePot(pot);
-              tray.placeBuilding(trayTile.x, trayTile.y, pot);
+            // Check if parentTray is directly available in userData
+            if (this.focusedObject.mesh && this.focusedObject.mesh.userData && this.focusedObject.mesh.userData.parentTray) {
+              tray = this.focusedObject.mesh.userData.parentTray;
+            } 
+            // Check each tray in the room to see if it contains this tile
+            else {
+              this.room.root.traverse(object => {
+                if (!tray && object.userData && object.userData.instance && object.userData.instance.type === 'tray') {
+                  const checkTray = object.userData.instance;
+                  // Check if this tile belongs to this tray
+                  for (let x = 0; x < checkTray.width; x++) {
+                    for (let y = 0; y < checkTray.length; y++) {
+                      if (checkTray.getTile(x, y) === this.focusedObject) {
+                        tray = checkTray;
+                        break;
+                      }
+                    }
+                    if (tray) break;
+                  }
+                }
+              });
             }
+            
+            // If we found the parent tray, place the pot
+            if (tray) {
+              const trayTile = this.focusedObject;
+              
+              // Only add pot if the tile is empty
+              if (!trayTile.building) {
+                console.log("Placing pot on tray tile at", trayTile.x, trayTile.y);
+                const pot = new Pot(0, 0);
+                window.ui.configurePot(pot);
+                
+                // Use tray's local coordinates for placement
+                const localX = trayTile.x;
+                const localY = trayTile.y;
+                
+                // Let's add more logging to debug
+                console.log(`Pot placement - Tray position: (${tray.x}, ${tray.y}), Local tile: (${localX}, ${localY})`);
+                
+                try {
+                  // Place the pot using local coordinates
+                  tray.placeBuilding(localX, localY, pot);
+                  
+                  // Update the pot counter when placing on a tray
+                  this.room.getPotsModule().updatePotCount();
+                } catch (error) {
+                  console.error("Error placing pot on tray:", error);
+                }
+              }
+            } else {
+              console.error("No parent tray found for this tile");
+            }
+          } else if (this.focusedObject.type === 'pot') {
+            // Direct pot selection - handle the case where a pot is already selected
+            console.log("Pot directly selected - skipping placement");
           }
         }
         break;
       case 'slab':
         if (this.focusedObject && this.highlightedTiles && this.highlightedTiles.length > 0) {
-          // Only place on tray tiles
-          if (this.focusedObject.parent?.userData?.instance?.type === 'tray') {
-            const tray = this.focusedObject.parent.userData.instance;
-            const trayTile = this.focusedObject;
+          // Handle tiles on trays 
+          if (this.focusedObject instanceof Tile) {
+            // Find the parent tray
+            let tray = null;
             
-            // Check if there's enough space for the slab (already checked in updateFocusedObject)
-            const spaceAvailable = this.highlightedTiles.every(tile => !tile.building);
+            // Check if parentTray is directly available in userData
+            if (this.focusedObject.mesh && this.focusedObject.mesh.userData && this.focusedObject.mesh.userData.parentTray) {
+              tray = this.focusedObject.mesh.userData.parentTray;
+            } 
+            // Check each tray in the room to see if it contains this tile
+            else {
+              this.room.root.traverse(object => {
+                if (!tray && object.userData && object.userData.instance && object.userData.instance.type === 'tray') {
+                  const checkTray = object.userData.instance;
+                  // Check if this tile belongs to this tray
+                  for (let x = 0; x < checkTray.width; x++) {
+                    for (let y = 0; y < checkTray.length; y++) {
+                      if (checkTray.getTile(x, y) === this.focusedObject) {
+                        tray = checkTray;
+                        break;
+                      }
+                    }
+                    if (tray) break;
+                  }
+                }
+              });
+            }
             
-            if (spaceAvailable) {
+            // If we found the parent tray, check if there's space for the slab
+            if (tray) {
+              const trayTile = this.focusedObject;
               const config = window.ui.getSlabConfig();
-              const slab = new Slab(0, 0, config.length);
-              slab.height = config.height;
-              tray.placeBuilding(trayTile.x, trayTile.y, slab);
+              
+              // Check if there's enough space for the slab
+              let spaceAvailable = true;
+              for (let i = 0; i < config.length; i++) {
+                const checkY = trayTile.y + i;
+                const checkTile = tray.getTile(trayTile.x, checkY);
+                if (!checkTile || checkY >= tray.length || checkTile.building) {
+                  spaceAvailable = false;
+                  break;
+                }
+              }
+              
+              // If there's enough space, place the slab
+              if (spaceAvailable) {
+                console.log("Placing slab on tray tile at", trayTile.x, trayTile.y);
+                const slab = new Slab(0, 0, config.length);
+                slab.height = config.height;
+                tray.placeBuilding(trayTile.x, trayTile.y, slab);
+                // Update the slab counter when placing on a tray
+                this.room.getSlabsModule().updateSlabCount();
+              } else {
+                console.warn("Not enough space for slab on tray");
+              }
             }
           }
         }
@@ -407,9 +531,40 @@ export class Game {
           // Check if all required tiles are available (already checked in updateFocusedObject)
           const allTilesAvailable = this.highlightedTiles.every(tile => !tile.building);
           
-          if (allTilesAvailable) {
-            const config = window.ui.getTrayConfig();
-            
+          // Additional check for tray overlap
+          let trayOverlap = false;
+          const config = window.ui.getTrayConfig();
+          
+          // Check if any of the tiles would overlap with an existing tray
+          for (let dx = 0; dx < config.width; dx++) {
+            for (let dy = 0; dy < config.length; dy++) {
+              const checkX = x + dx;
+              const checkY = y + dy;
+              
+              // Check surrounding tiles for trays that extend into this position
+              for (let sx = Math.max(0, checkX - 20); sx <= Math.min(this.room.width - 1, checkX + 20); sx++) {
+                for (let sy = Math.max(0, checkY - 20); sy <= Math.min(this.room.height - 1, checkY + 20); sy++) {
+                  const surroundingTile = this.room.getTile(sx, sy);
+                  
+                  if (surroundingTile && surroundingTile.building && surroundingTile.building.type === 'tray') {
+                    const existingTray = surroundingTile.building;
+                    
+                    // Check if the existing tray extends to the current position
+                    if (checkX >= sx && checkX < sx + existingTray.width &&
+                        checkY >= sy && checkY < sy + existingTray.length) {
+                      trayOverlap = true;
+                      break;
+                    }
+                  }
+                }
+                if (trayOverlap) break;
+              }
+              if (trayOverlap) break;
+            }
+            if (trayOverlap) break;
+          }
+          
+          if (allTilesAvailable && !trayOverlap) {
             // Place the tray
             this.room.placeBuilding(x, y, 'tray');
             
@@ -433,38 +588,59 @@ export class Game {
         break;
       case 'cannabis-plant':
         if (this.focusedObject) {
-          // Check if we're placing directly on a pot
-          if (this.focusedObject.building?.type === 'pot') {
-            const pot = this.focusedObject.building;
+          console.log('Cannabis plant placement attempt on:', this.focusedObject);
+          
+          // Different cases based on what is selected
+          
+          // Case 1: Direct pot selection (either via userData or as the object itself)
+          if (this.focusedObject.type === 'pot') {
+            // Direct reference to a pot object
+            const pot = this.focusedObject;
             if (!pot.plant) {
+              console.log('Placing plant directly on pot object');
               const plant = new CannabisPlant(0, 0);
-              plant.refreshView(); // Ensure plant has its mesh before adding
+              plant.refreshView();
               pot.setPlant(plant);
+              this.room.getPlantsModule().updatePlantCount();
             }
           }
-          // Check if we're placing on a pot that's on a tray
-          else if (this.focusedObject.building?.type === 'pot' && 
-                   this.focusedObject.parent?.userData?.instance?.type === 'tray') {
-            const pot = this.focusedObject.building;
+          // Case 2: Pot selected via mesh
+          else if (this.focusedObject.userData?.instance?.type === 'pot') {
+            const pot = this.focusedObject.userData.instance;
             if (!pot.plant) {
+              console.log('Placing plant on pot (via mesh userData)');
               const plant = new CannabisPlant(0, 0);
-              plant.refreshView(); // Ensure plant has its mesh before adding
+              plant.refreshView();
               pot.setPlant(plant);
+              this.room.getPlantsModule().updatePlantCount();
             }
           }
-          // Check if we're placing on a slab
-          else if (this.focusedObject.building?.type === 'slab') {
+          // Case 3: Tile with pot building
+          else if (this.focusedObject instanceof Tile && this.focusedObject.building?.type === 'pot') {
+            const pot = this.focusedObject.building;
+            if (!pot.plant) {
+              console.log('Placing plant on pot (via tile.building)');
+              const plant = new CannabisPlant(0, 0);
+              plant.refreshView();
+              pot.setPlant(plant);
+              this.room.getPlantsModule().updatePlantCount();
+            }
+          }
+          // Case 4: Slab placement
+          else if (this.focusedObject instanceof Tile && this.focusedObject.building?.type === 'slab') {
             const slab = this.focusedObject.building;
             // Determine position on the slab
             const localY = this.focusedObject.y - slab.y;
             if (localY >= 0 && localY < slab.length && !slab.plants[localY]) {
+              console.log('Placing plant on slab at position', localY);
               const plant = new CannabisPlant(0, 0);
-              plant.refreshView(); // Ensure plant has its mesh before adding
+              plant.refreshView();
               slab.setPlant(plant, localY);
+              this.room.getPlantsModule().updatePlantCount();
             }
           }
-          // Do not allow direct placement on a room tile or a tray
-          else if (this.focusedObject instanceof Tile) {
+          // Not a valid placement location
+          else {
             console.warn('Cannabis plants can only be placed in pots or on slabs');
           }
         }
@@ -510,19 +686,56 @@ export class Game {
 
     // Filter out objects marked to skip raycast (hidden walls)
     let targets = [];
+    
+    // Include objects from the room root
     this.room.root.traverse(object => {
       if (object.isMesh && (!object.userData || !object.userData.skipRaycast)) {
         targets.push(object);
       }
     });
+    
+    // Additionally, specifically look for and include all tiles from trays
+    this.room.root.traverse(object => {
+      if (object.userData && object.userData.instance && object.userData.instance.type === 'tray') {
+        const tray = object.userData.instance;
+        // Add all tiles in the tray to targets
+        for (let x = 0; x < tray.width; x++) {
+          for (let y = 0; y < tray.length; y++) {
+            const trayTile = tray.getTile(x, y);
+            if (trayTile && trayTile.mesh) {
+              // Make sure the tile is marked as belonging to the tray
+              trayTile.mesh.userData = {
+                instance: trayTile,
+                parentTray: tray,
+                id: Math.random().toString(36).substr(2, 9)
+              };
+              targets.push(trayTile.mesh);
+            }
+          }
+        }
+      }
+    });
 
-    let intersections = this.raycaster.intersectObjects(targets, false);
+    let intersections = this.raycaster.intersectObjects(targets, true);
     if (intersections.length > 0) {
       // Get the first intersection and find its parent Object
       let current = intersections[0].object;
+      
+      // Special case: if the object has parentTray, return the tile directly
+      if (current.userData && current.userData.parentTray) {
+        return current.userData.instance;
+      }
+      
+      // Special case: if object has direct instance, return it
+      if (current.userData && current.userData.instance) {
+        return current.userData.instance;
+      }
+      
+      // Walk up the hierarchy to find an object with userData.instance
       while (current && (!current.userData || !current.userData.instance)) {
         current = current.parent;
       }
+      
       return current?.userData?.instance || null;
     } else {
       return null;

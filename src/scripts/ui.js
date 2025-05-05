@@ -4,6 +4,21 @@ import { Pot } from './sim/buildings/objects/pot.js';
 import { Slab } from './sim/buildings/objects/slab.js';
 import { Tray } from './sim/buildings/objects/tray.js';
 
+// Add this global function for the HTML onclick event
+window.togglePotInputs = function() {
+  const roundInputs = document.getElementById('round-pot-inputs');
+  const squareInputs = document.getElementById('square-pot-inputs');
+  const isRound = document.getElementById('pot-shape-round').checked;
+  
+  if (isRound) {
+    roundInputs.style.display = 'block';
+    squareInputs.style.display = 'none';
+  } else {
+    roundInputs.style.display = 'none';
+    squareInputs.style.display = 'block';
+  }
+};
+
 export class GameUI {
   /**
    * Currently selected tool
@@ -48,7 +63,7 @@ export class GameUI {
   getDoorWidth() {
     const widthInput = document.getElementById('door-width');
     const width = parseInt(widthInput.value, 10);
-    return isNaN(width) ? 2 : Math.max(1, Math.min(width, 4));
+    return isNaN(width) ? 2 : Math.max(1, Math.min(width, 8));
   }
 
   /**
@@ -62,15 +77,29 @@ export class GameUI {
     
     // Get dimensions
     const height = parseFloat(document.getElementById('pot-height').value);
-    const topDiameter = parseFloat(document.getElementById('pot-top-diameter').value);
-    const bottomDiameter = parseFloat(document.getElementById('pot-bottom-diameter').value);
     
-    return {
-      shape,
-      height: isNaN(height) ? 0.3 : Math.max(0.1, Math.min(height, 0.5)),
-      topDiameter: isNaN(topDiameter) ? 0.25 : Math.max(0.1, Math.min(topDiameter, 0.3)),
-      bottomDiameter: isNaN(bottomDiameter) ? 0.2 : Math.max(0.1, Math.min(bottomDiameter, 0.3))
-    };
+    // Get shape-specific dimensions
+    if (shape === 'round') {
+      const topDiameter = parseFloat(document.getElementById('pot-top-diameter').value);
+      const bottomDiameter = parseFloat(document.getElementById('pot-bottom-diameter').value);
+      
+      return {
+        shape,
+        height: isNaN(height) ? 0.3 : Math.max(0.1, Math.min(height, 0.5)),
+        topDiameter: isNaN(topDiameter) ? 0.25 : Math.max(0.1, Math.min(topDiameter, 0.3)),
+        bottomDiameter: isNaN(bottomDiameter) ? 0.2 : Math.max(0.1, Math.min(bottomDiameter, 0.3))
+      };
+    } else {
+      const topSide = parseFloat(document.getElementById('pot-top-side').value);
+      const bottomSide = parseFloat(document.getElementById('pot-bottom-side').value);
+      
+      return {
+        shape,
+        height: isNaN(height) ? 0.3 : Math.max(0.1, Math.min(height, 0.5)),
+        topSide: isNaN(topSide) ? 0.3 : Math.max(0.1, Math.min(topSide, 0.5)),
+        bottomSide: isNaN(bottomSide) ? 0.3 : Math.max(0.1, Math.min(bottomSide, 0.5))
+      };
+    }
   }
 
   /**
@@ -201,8 +230,15 @@ export class GameUI {
     const config = this.getPotConfig();
     pot.shape = config.shape;
     pot.height = config.height;
-    pot.topDiameter = config.topDiameter;
-    pot.bottomDiameter = config.bottomDiameter;
+    
+    if (pot.shape === 'round') {
+      pot.topDiameter = config.topDiameter;
+      pot.bottomDiameter = config.bottomDiameter;
+    } else {
+      pot.topSide = config.topSide;
+      pot.bottomSide = config.bottomSide;
+    }
+    
     pot.refreshView();
   }
 

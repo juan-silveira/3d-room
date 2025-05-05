@@ -64,16 +64,35 @@ export class Tray extends Building {
    */
   initializeTiles() {
     this.tiles = [];
+    
+    // Calculate the tray top position in tile units
+    const legHeight = metersToTileUnits(this.legHeight);
+    const topThickness = metersToTileUnits(this.topThickness);
+    const trayTopPosition = legHeight + topThickness;
+    
+    // Position calculation needs to start from the origin corner (x,y)
+    // and extend the grid in the positive direction
     for (let x = 0; x < this.width; x++) {
       const column = [];
       for (let y = 0; y < this.length; y++) {
         const tile = new Tile(x, y);
-        // Position tile relative to the tray
+        // Position tile relative to the tray's origin point, at the top of the tray
         tile.position.set(
-          x - this.width / 2 + 0.5, 
-          metersToTileUnits(this.legHeight + this.topThickness), 
-          y - this.length / 2 + 0.5
+          x, 
+          trayTopPosition, 
+          y
         );
+        tile.refreshView();
+        
+        // Importante: Garantir que cada tile tenha um link para a tray pai
+        if (tile.mesh) {
+          tile.mesh.userData = {
+            instance: tile,
+            parentTray: this,
+            id: Math.random().toString(36).substr(2, 9)
+          };
+        }
+        
         column.push(tile);
       }
       this.tiles.push(column);
@@ -87,7 +106,17 @@ export class Tray extends Building {
     // Refresh all tiles in the tray
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.length; y++) {
-        this.tiles[x][y].refreshView();
+        const tile = this.tiles[x][y];
+        tile.refreshView();
+        
+        // Importante: Garantir que cada tile tenha um link para a tray pai
+        if (tile.mesh) {
+          tile.mesh.userData = {
+            instance: tile,
+            parentTray: this,
+            id: Math.random().toString(36).substr(2, 9)
+          };
+        }
       }
     }
   }
@@ -106,7 +135,7 @@ export class Tray extends Building {
     // Create a group for all the tray parts
     const group = new THREE.Group();
     
-    // Create table top
+    // Create a semi-transparent table top (greatly reduced opacity)
     const topGeometry = new THREE.BoxGeometry(
       this.width,
       topThickness,
@@ -116,14 +145,57 @@ export class Tray extends Building {
     const topMaterial = new THREE.MeshStandardMaterial({
       color: 0xA0A0A0, // Medium gray color for table top
       roughness: 0.5,
-      metalness: 0.3
+      metalness: 0.3,
+      transparent: true,
+      opacity: 0.2  // Make it very transparent
     });
     
     const topMesh = new THREE.Mesh(topGeometry, topMaterial);
-    topMesh.position.y = legHeight + topThickness / 2;
+    topMesh.position.set(
+      this.width / 2 - 0.5,
+      legHeight + topThickness / 2,
+      this.length / 2 - 0.5
+    );
     topMesh.castShadow = true;
     topMesh.receiveShadow = true;
     group.add(topMesh);
+    
+    // Add grid overlay on top surface
+    if (window.assetManager && window.assetManager.textures && window.assetManager.textures['grid']) {
+      // Create a separate material for the tray grid that doesn't affect the room's grid
+      const trayGridMaterial = new THREE.MeshBasicMaterial({
+        color: 0x000000,
+        map: window.assetManager.textures['grid'].clone(), // Clone to avoid affecting room's texture
+        transparent: true,
+        opacity: 0.3,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      });
+      
+      // Configure the grid texture to repeat properly for this tray only
+      trayGridMaterial.map.repeat.set(this.width, this.length);
+      trayGridMaterial.map.wrapS = THREE.RepeatWrapping;
+      trayGridMaterial.map.wrapT = THREE.RepeatWrapping;
+      
+      // Create a plane for the grid just slightly above the table surface
+      const gridGeometry = new THREE.PlaneGeometry(this.width, this.length);
+      const gridPlane = new THREE.Mesh(gridGeometry, trayGridMaterial);
+      
+      // Position the grid just above the table surface (to prevent z-fighting)
+      gridPlane.position.set(
+        this.width / 2 - 0.5,
+        legHeight + topThickness + 0.001,
+        this.length / 2 - 0.5
+      );
+      
+      // Rotate the grid plane to be horizontal (face up)
+      gridPlane.rotation.x = -Math.PI / 2;
+      
+      // IMPORTANT: Make the grid ignore raycast so we can interact with tiles beneath it
+      gridPlane.raycast = () => null;
+      
+      group.add(gridPlane);
+    }
     
     // Create table legs (four corners)
     const legGeometry = new THREE.BoxGeometry(0.1, legHeight, 0.1);
@@ -136,15 +208,19 @@ export class Tray extends Building {
     
     // Positions for the four legs
     const legPositions = [
-      {x: -this.width/2 + 0.1, z: -this.length/2 + 0.1},
-      {x: this.width/2 - 0.1, z: -this.length/2 + 0.1},
-      {x: -this.width/2 + 0.1, z: this.length/2 - 0.1},
-      {x: this.width/2 - 0.1, z: this.length/2 - 0.1},
+      {x: 0.1, z: 0.1},                       // Near left
+      {x: this.width - 0.1, z: 0.1},          // Near right
+      {x: 0.1, z: this.length - 0.1},         // Far left
+      {x: this.width - 0.1, z: this.length - 0.1}, // Far right
     ];
     
     legPositions.forEach(pos => {
       const legMesh = new THREE.Mesh(legGeometry, legMaterial);
-      legMesh.position.set(pos.x, legHeight/2, pos.z);
+      legMesh.position.set(
+        pos.x - 0.5, 
+        legHeight/2, 
+        pos.z - 0.5
+      );
       legMesh.castShadow = true;
       legMesh.receiveShadow = true;
       group.add(legMesh);
@@ -165,9 +241,9 @@ export class Tray extends Building {
     );
     const northEdge = new THREE.Mesh(northEdgeGeometry, edgeMaterial);
     northEdge.position.set(
-      0,
+      this.width / 2 - 0.5,
       legHeight + topThickness + edgeHeight/2,
-      -this.length/2 - edgeThickness/2
+      0 - edgeThickness/2 - 0.5
     );
     northEdge.castShadow = true;
     northEdge.receiveShadow = true;
@@ -181,9 +257,9 @@ export class Tray extends Building {
     );
     const southEdge = new THREE.Mesh(southEdgeGeometry, edgeMaterial);
     southEdge.position.set(
-      0,
+      this.width / 2 - 0.5,
       legHeight + topThickness + edgeHeight/2,
-      this.length/2 + edgeThickness/2
+      this.length - 0.5 + edgeThickness/2
     );
     southEdge.castShadow = true;
     southEdge.receiveShadow = true;
@@ -197,9 +273,9 @@ export class Tray extends Building {
     );
     const eastEdge = new THREE.Mesh(eastEdgeGeometry, edgeMaterial);
     eastEdge.position.set(
-      this.width/2 + edgeThickness/2,
+      this.width - 0.5 + edgeThickness/2,
       legHeight + topThickness + edgeHeight/2,
-      0
+      this.length / 2 - 0.5
     );
     eastEdge.castShadow = true;
     eastEdge.receiveShadow = true;
@@ -213,9 +289,9 @@ export class Tray extends Building {
     );
     const westEdge = new THREE.Mesh(westEdgeGeometry, edgeMaterial);
     westEdge.position.set(
-      -this.width/2 - edgeThickness/2,
+      0 - 0.5 - edgeThickness/2,
       legHeight + topThickness + edgeHeight/2,
-      0
+      this.length / 2 - 0.5
     );
     westEdge.castShadow = true;
     westEdge.receiveShadow = true;
@@ -254,14 +330,163 @@ export class Tray extends Building {
    * @param {Building} building The building to place
    */
   placeBuilding(x, y, building) {
-    const tile = this.getTile(x, y);
+    // Convert global coordinates to local tray coordinates if needed
+    let localX = x;
+    let localY = y;
+    
+    // If x or y are greater than the tray dimensions, they might be global coordinates
+    // Check if they are relative to room coordinates and convert them
+    if (x >= this.width || y >= this.length) {
+      // Try to convert from room coordinates to tray-local coordinates
+      localX = x - this.x;
+      localY = y - this.y;
+      console.log(`Converting coordinates from (${x}, ${y}) to local (${localX}, ${localY})`);
+    }
+    
+    const tile = this.getTile(localX, localY);
     if (tile) {
+      // Log para debugging
+      console.log(`Tray: Placing building on tray tile at local (${localX}, ${localY})`, building);
+      
+      // Certifique-se de que o building existe antes de prosseguir
+      if (!building) {
+        console.error("Null building provided to placeBuilding");
+        return;
+      }
+      
+      // Remova qualquer construção existente na tile antes de adicionar a nova
+      if (tile.building) {
+        tile.building.dispose();
+        tile.remove(tile.building);
+      }
+      
+      // Adicione o building à tile
       tile.setBuilding(building);
-      // Position the building correctly on the tile
+      
+      // Certifique-se de que o building está na posição correta
+      // dentro da hierarquia da cena Three.js
       if (building) {
-        building.position.set(0, 0, 0); // Reset position relative to the tile
+        // Adicione o building diretamente à tray para melhor visibilidade
+        this.add(building);
+        
+        // Calcule a altura da superfície da tray
+        const legHeight = metersToTileUnits(this.legHeight);
+        const topThickness = metersToTileUnits(this.topThickness);
+        const trayTopPosition = legHeight + topThickness;
+        
+        // Posicione o building corretamente em relação à tile, incluindo a altura da tray
+        building.position.set(localX, trayTopPosition, localY);
+        console.log(`Positioning building at height ${trayTopPosition} on tray`);
+        
+        // Certifique-se de que o userData está configurado corretamente
+        if (building.mesh) {
+          building.mesh.traverse((obj) => {
+            if (obj.isMesh) {
+              obj.userData = {
+                instance: building,
+                parentTile: tile,
+                id: Math.random().toString(36).substr(2, 9)
+              };
+              
+              // Certifique-se de que o mesh está visível e com sombras adequadas
+              obj.visible = true;
+              obj.castShadow = true;
+              obj.receiveShadow = true;
+            }
+          });
+        }
+        
+        // Atualize a visualização do building para garantir que seja renderizado corretamente
+        building.refreshView();
+        
+        // Atualize a visualização da tile
+        tile.refreshView();
+        
+        // Forçar uma atualização da tray inteira
+        this.refreshView();
+        
+        console.log("Building placed successfully", building);
+      }
+    } else {
+      console.error(`No tile found at ${localX}, ${localY} on tray (original coordinates: ${x}, ${y})`);
+    }
+  }
+
+  /**
+   * Removes a building from the tray at the specified coordinates
+   * @param {number} x The x-coordinate on the tray
+   * @param {number} y The y-coordinate on the tray 
+   */
+  trash(x, y) {
+    const tile = this.getTile(x, y);
+    
+    if (tile && tile.building) {
+      const wasPlant = tile.building.type === 'cannabis-plant';
+      const wasPot = tile.building.type === 'pot';
+      const wasSlab = tile.building.type === 'slab';
+      
+      // Check if pot has a plant before removing it
+      if (wasPot && tile.building.plant) {
+        // We need to update plant count if pot has plant
+        tile.building.setPlant(null);
+        // Get the room to update plant count
+        const room = this.getRoom();
+        if (room) {
+          room.getPlantsModule().updatePlantCount();
+        }
+      }
+      
+      // Check if slab has plants before removing it
+      if (wasSlab && tile.building.plants) {
+        // Clear all plants from the slab
+        for (let i = 0; i < tile.building.plants.length; i++) {
+          if (tile.building.plants[i]) {
+            tile.building.setPlant(null, i);
+          }
+        }
+        // Get the room to update plant count
+        const room = this.getRoom();
+        if (room) {
+          room.getPlantsModule().updatePlantCount();
+        }
+      }
+      
+      tile.building.dispose();
+      tile.setBuilding(null);
+      tile.refreshView();
+      
+      // Update the appropriate counter
+      const room = this.getRoom();
+      if (room) {
+        if (wasPot) {
+          room.getPotsModule().updatePotCount();
+        } else if (wasSlab) {
+          room.getSlabsModule().updateSlabCount();
+        }
       }
     }
+  }
+
+  /**
+   * Gets the room this tray is in
+   * @returns {Room|null} The room or null if not found
+   */
+  getRoom() {
+    // Walk up the parent chain until we find the Room
+    let parent = this.parent;
+    while (parent) {
+      if (parent.userData && parent.userData.isRoom) {
+        return parent.userData.instance;
+      }
+      parent = parent.parent;
+    }
+    
+    // Alternative approach: get from the window
+    if (window.game && window.game.room) {
+      return window.game.room;
+    }
+    
+    return null;
   }
 
   /**

@@ -30,7 +30,7 @@ export class AssetManager {
         this.models[name] = new THREE.Group();
         this.loadedModelCount++;
       } else {
-        this.#loadModel(name, meta);
+      this.#loadModel(name, meta);
       }
     }
 

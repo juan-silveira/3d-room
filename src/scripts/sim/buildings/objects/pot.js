@@ -17,16 +17,28 @@ export class Pot extends Building {
   height = 0.3;
   
   /**
-   * Top diameter/width of the pot in meters
+   * Top diameter of the pot in meters (for round pots)
    * @type {number}
    */
   topDiameter = 0.25;
   
   /**
-   * Bottom diameter/width of the pot in meters
+   * Bottom diameter of the pot in meters (for round pots)
    * @type {number}
    */
   bottomDiameter = 0.2;
+  
+  /**
+   * Top side length of the pot in meters (for square pots)
+   * @type {number}
+   */
+  topSide = 0.3;
+  
+  /**
+   * Bottom side length of the pot in meters (for square pots)
+   * @type {number}
+   */
+  bottomSide = 0.3;
   
   /**
    * The plant contained in this pot
@@ -97,38 +109,57 @@ export class Pot extends Building {
   createSquarePot() {
     // Convert dimensions from meters to Three.js units
     const height = metersToTileUnits(this.height);
-    const topWidth = metersToTileUnits(this.topDiameter);
-    const bottomWidth = metersToTileUnits(this.bottomDiameter);
+    const topWidth = metersToTileUnits(this.topSide);
+    const bottomWidth = metersToTileUnits(this.bottomSide);
     
-    // Create a truncated pyramid (custom geometry)
-    const shape = new THREE.Shape();
-    shape.moveTo(-bottomWidth/2, -bottomWidth/2);
-    shape.lineTo(bottomWidth/2, -bottomWidth/2);
-    shape.lineTo(bottomWidth/2, bottomWidth/2);
-    shape.lineTo(-bottomWidth/2, bottomWidth/2);
-    shape.closePath();
+    // Create a custom geometry for a tapered box (truncated pyramid)
+    const geometry = new THREE.BufferGeometry();
     
-    const extrudeSettings = {
-      steps: 1,
-      depth: height,
-      bevelEnabled: false
-    };
+    // Define the 8 corners of the truncated pyramid
+    const halfBottomWidth = bottomWidth / 2;
+    const halfTopWidth = topWidth / 2;
     
-    // Create custom extrusion for the truncated pyramid
-    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    // Define vertices (bottom 4 corners, then top 4 corners)
+    const vertices = new Float32Array([
+      // Bottom layer (y = 0)
+      -halfBottomWidth, 0, -halfBottomWidth,
+      halfBottomWidth, 0, -halfBottomWidth,
+      halfBottomWidth, 0, halfBottomWidth,
+      -halfBottomWidth, 0, halfBottomWidth,
+      
+      // Top layer (y = height)
+      -halfTopWidth, height, -halfTopWidth,
+      halfTopWidth, height, -halfTopWidth,
+      halfTopWidth, height, halfTopWidth,
+      -halfTopWidth, height, halfTopWidth
+    ]);
     
-    // Adjust scale to create the tapered effect
-    const topScale = topWidth / bottomWidth;
-    for (let i = 0; i < geometry.attributes.position.count; i++) {
-      const y = geometry.attributes.position.getY(i);
-      if (Math.abs(y - height) < 0.001) {
-        const x = geometry.attributes.position.getX(i);
-        const z = geometry.attributes.position.getZ(i);
-        geometry.attributes.position.setX(i, x * topScale);
-        geometry.attributes.position.setZ(i, z * topScale);
-      }
-    }
+    // Define faces (triangles) using indices
+    const indices = [
+      // Bottom face
+      0, 1, 2,
+      0, 2, 3,
+      
+      // Top face
+      4, 6, 5,
+      4, 7, 6,
+      
+      // Side faces
+      0, 4, 1,
+      1, 4, 5,
+      
+      1, 5, 2,
+      2, 5, 6,
+      
+      2, 6, 3,
+      3, 6, 7,
+      
+      3, 7, 0,
+      0, 7, 4
+    ];
     
+    geometry.setIndex(indices);
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
     geometry.computeVertexNormals();
     
     const material = new THREE.MeshStandardMaterial({
@@ -138,8 +169,8 @@ export class Pot extends Building {
     });
     
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.rotation.x = Math.PI / 2; // Rotate to stand upright
-    mesh.position.y = 0; // Place on the ground
+    // Position the mesh at the right height
+    mesh.position.y = 0; // Bottom of pot is already at y=0 in geometry
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     
@@ -164,7 +195,8 @@ export class Pot extends Building {
       this.add(plant);
       
       // Position the plant at the top center of the pot
-      plant.position.set(0, metersToTileUnits(this.height), 0);
+      const potHeight = metersToTileUnits(this.height);
+      plant.position.set(0, potHeight, 0);
     }
   }
 
@@ -181,13 +213,27 @@ export class Pot extends Building {
       <br>
       <span class="info-label">Height</span>
       <span class="info-value">${this.height.toFixed(2)} m</span>
-      <br>
-      <span class="info-label">Top Diameter</span>
-      <span class="info-value">${this.topDiameter.toFixed(2)} m</span>
-      <br>
-      <span class="info-label">Bottom Diameter</span>
-      <span class="info-value">${this.bottomDiameter.toFixed(2)} m</span>
-      <br>
+      <br>`;
+      
+    if (this.shape === 'round') {
+      html += `
+        <span class="info-label">Top Diameter</span>
+        <span class="info-value">${this.topDiameter.toFixed(2)} m</span>
+        <br>
+        <span class="info-label">Bottom Diameter</span>
+        <span class="info-value">${this.bottomDiameter.toFixed(2)} m</span>
+        <br>`;
+    } else {
+      html += `
+        <span class="info-label">Top Side</span>
+        <span class="info-value">${this.topSide.toFixed(2)} m</span>
+        <br>
+        <span class="info-label">Bottom Side</span>
+        <span class="info-value">${this.bottomSide.toFixed(2)} m</span>
+        <br>`;
+    }
+    
+    html += `
       <span class="info-label">Plant</span>
       <span class="info-value">${this.plant ? this.plant.name : 'None'}</span>
       <br>

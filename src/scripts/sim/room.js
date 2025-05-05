@@ -4,6 +4,9 @@ import { createBuilding } from './buildings/buildingObjects.js';
 import { Tile } from './tile.js';
 import { Service } from './services/service.js';
 import { PlantsModule } from './buildings/modules/plants.js';
+import { TraysModule } from './buildings/modules/trays.js';
+import { PotsModule } from './buildings/modules/pots.js';
+import { SlabsModule } from './buildings/modules/slabs.js';
 import { TILE_SCALE, metersToTileUnits } from './constants.js';
 
 export class Room extends THREE.Group {
@@ -76,6 +79,18 @@ export class Room extends THREE.Group {
    * @type {PlantsModule}
    */
   #plantsModule;
+  /**
+   * @type {TraysModule}
+   */
+  #traysModule;
+  /**
+   * @type {PotsModule}
+   */
+  #potsModule;
+  /**
+   * @type {SlabsModule}
+   */
+  #slabsModule;
 
   constructor(width, height, wallHeight = 3, wallThickness = 0.2, name = 'My Room') {
     super();
@@ -86,6 +101,12 @@ export class Room extends THREE.Group {
     // Convert meters to tile units
     this.wallHeight = metersToTileUnits(wallHeight);
     this.wallThickness = metersToTileUnits(wallThickness);
+    
+    // Add userData to identify this as a Room
+    this.userData = {
+      isRoom: true,
+      instance: this
+    };
     
     this.add(this.debugMeshes);
     this.add(this.root);
@@ -105,6 +126,9 @@ export class Room extends THREE.Group {
 
     this.services = [];
     this.#plantsModule = new PlantsModule(this);
+    this.#traysModule = new TraysModule(this);
+    this.#potsModule = new PotsModule(this);
+    this.#slabsModule = new SlabsModule(this);
     
     // Create walls after tiles
     this.createWalls();
@@ -310,7 +334,7 @@ export class Room extends THREE.Group {
     }
     
     // Determina se teremos uma ou duas portas
-    const useSingleDoor = width === 1;
+    const useSingleDoor = width === 3;
     
     // Quando width = 1, a porta única ocupa todo o espaço
     // Quando width >= 2, dividimos o espaço entre duas portas
@@ -324,7 +348,7 @@ export class Room extends THREE.Group {
       
       // Calculate panel width - if it's a single door, it has width of 1 tile
       // Otherwise, each panel has width of (total width/2)
-      const panelWidth = isSingleDoor ? 1 : doorUnitWidth;
+      const panelWidth = isSingleDoor ? 3 : doorUnitWidth;
       
       // Main door panel
       const doorPanel = new THREE.Mesh(
@@ -341,7 +365,7 @@ export class Room extends THREE.Group {
       const barWidth = (wallSide === 'north' || wallSide === 'south' ? panelWidth : panelWidth) * 0.7;
       const barHeight = metersToTileUnits(0.05);
       const barThickness = metersToTileUnits(0.05);
-      const barY = doorHeight * (-0.4); // Position at about 40% of door height
+      const barY = doorHeight * (-0.1); // Position at about 10% of door height
       const barOffset = doorThickness * 0.7;
       
       // Adicionar barra antipânico no lado externo
@@ -521,12 +545,12 @@ export class Room extends THREE.Group {
         case 'north':
         case 'south':
           // Para norte/sul, centralizamos a porta no meio do tile X
-          singleDoor.position.set(x, doorPositionY, doorWallZ);
+          singleDoor.position.set(x + 1, doorPositionY, doorWallZ);
           break;
         case 'east':
         case 'west':
           // Para leste/oeste, centralizamos a porta no meio do tile Y
-          singleDoor.position.set(doorWallX, doorPositionY, y);
+          singleDoor.position.set(doorWallX, doorPositionY, y + 1);
           break;
       }
       
@@ -709,12 +733,25 @@ export class Room extends THREE.Group {
    * @param {number} x 
    * @param {number} y 
    * @param {string} buildingType 
+   * @returns {boolean} True if building was placed, false otherwise
    */
   placeBuilding(x, y, buildingType) {
     const tile = this.getTile(x, y);
 
-    // If the tile doesnt' already have a building, place one there
+    // If the tile doesn't already have a building, place one there
     if (tile && !tile.building) {
+      // Special rule: if trays exist and buildingType is pot, pots can only be placed on trays
+      if (buildingType === 'pot' && this.#traysModule.hasTrays()) {
+        console.warn('Pots can only be placed on trays when trays are present in the room');
+        return false;
+      }
+      
+      // Special rule: if buildingType is cannabis-plant, it can only be placed on pots or slabs
+      if (buildingType === 'cannabis-plant') {
+        console.warn('Cannabis plants can only be placed in pots or on slabs');
+        return false;
+      }
+      
       tile.setBuilding(createBuilding(x, y, buildingType));
       tile.refreshView(this);
       
@@ -729,11 +766,21 @@ export class Room extends THREE.Group {
         this.vehicleGraph.updateTile(x, y, tile.building);
       }
 
-      // Atualiza a contagem de plantas se uma planta foi adicionada
+      // Update counters based on building type
       if (buildingType === 'cannabis-plant') {
         this.#plantsModule.updatePlantCount();
+      } else if (buildingType === 'tray') {
+        this.#traysModule.updateTrayCount();
+      } else if (buildingType === 'pot') {
+        this.#potsModule.updatePotCount();
+      } else if (buildingType === 'slab') {
+        this.#slabsModule.updateSlabCount();
       }
+      
+      return true;
     }
+    
+    return false;
   }
 
   /**
@@ -743,28 +790,54 @@ export class Room extends THREE.Group {
    */
   trash(x, y) {
     const tile = this.getTile(x, y);
+    
+    // Return if tile doesn't exist
+    if (!tile) return;
+    
+    // Return if there's no building on the tile
+    if (!tile.building) return;
 
-    if (tile.building) {
-      const wasPlant = tile.building.type === 'cannabis-plant';
+    const buildingType = tile.building.type;
+    const wasPlant = buildingType === 'cannabis-plant';
+    const wasTray = buildingType === 'tray';
+    const wasPot = buildingType === 'pot';
+    const wasSlab = buildingType === 'slab';
 
-      if (tile.building.type === BuildingType.road) {
-        this.vehicleGraph.updateTile(x, y, null);
-      }
+    if (tile.building.type === BuildingType.road) {
+      this.vehicleGraph.updateTile(x, y, null);
+    }
 
-      tile.building.dispose();
-      tile.setBuilding(null);
-      tile.refreshView(this);
+    tile.building.dispose();
+    tile.setBuilding(null);
+    tile.refreshView(this);
 
-      // Update neighboring tiles in case they need to change their mesh (e.g. roads)
-      this.getTile(x - 1, y)?.refreshView(this);
-      this.getTile(x + 1, y)?.refreshView(this);
-      this.getTile(x, y - 1)?.refreshView(this);
-      this.getTile(x, y + 1)?.refreshView(this);
+    // Update neighboring tiles in case they need to change their mesh (e.g. roads)
+    this.getTile(x - 1, y)?.refreshView(this);
+    this.getTile(x + 1, y)?.refreshView(this);
+    this.getTile(x, y - 1)?.refreshView(this);
+    this.getTile(x, y + 1)?.refreshView(this);
 
-      // Atualiza a contagem de plantas se uma planta foi removida
-      if (wasPlant) {
-        this.#plantsModule.updatePlantCount();
-      }
+    // Atualiza a contagem de plantas se uma planta foi removida
+    if (wasPlant) {
+      this.#plantsModule.updatePlantCount();
+    }
+    if (wasTray) {
+      this.#traysModule.updateTrayCount();
+      // When a tray is removed, we need to update pot and slab counts too
+      // since they may have contained pots and slabs
+      this.#potsModule.updatePotCount();
+      this.#slabsModule.updateSlabCount();
+      this.#plantsModule.updatePlantCount(); // Also update plants as they may have been on pots/slabs
+    }
+    if (wasPot) {
+      this.#potsModule.updatePotCount();
+      // If a pot had a plant, update the plant count too
+      this.#plantsModule.updatePlantCount();
+    }
+    if (wasSlab) {
+      this.#slabsModule.updateSlabCount();
+      // If a slab had plants, update the plant count too
+      this.#plantsModule.updatePlantCount();
     }
   }
 
@@ -863,5 +936,37 @@ export class Room extends THREE.Group {
         room.setTerrain(terrain, x, y);
       }
     }
+  }
+
+  /**
+   * Gets the plants module for the room
+   * @returns {PlantsModule}
+   */
+  getPlantsModule() {
+    return this.#plantsModule;
+  }
+
+  /**
+   * Gets the trays module for the room
+   * @returns {TraysModule}
+   */
+  getTraysModule() {
+    return this.#traysModule;
+  }
+
+  /**
+   * Gets the pots module for the room
+   * @returns {PotsModule}
+   */
+  getPotsModule() {
+    return this.#potsModule;
+  }
+
+  /**
+   * Gets the slabs module for the room
+   * @returns {SlabsModule}
+   */
+  getSlabsModule() {
+    return this.#slabsModule;
   }
 }
