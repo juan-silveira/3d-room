@@ -72,10 +72,6 @@
           onclick="ui.onToolSelected(event)">
           <img class="toolbar-icon" src="/icons/pot.png">
         </button>
-        <button id='button-slab' class="ui-button" data-type="slab"
-          onclick="ui.onToolSelected(event)">
-          <img class="toolbar-icon" src="/icons/slab.png">
-        </button>
         <button id='button-tray' class="ui-button" data-type="tray"
           onclick="ui.onToolSelected(event)">
           <img class="toolbar-icon" src="/icons/tray.png">
@@ -145,30 +141,6 @@
                   <input type="number" id="pot-bottom-side" class="form-control" min="0.1" max="0.5" value="0.15" step="0.01">
                   <span class="input-group-text">m</span>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div style="margin-top: 10px;color: white;">Slab:</div>
-        <div class="dropdown">
-          <button class="ui-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <img class="toolbar-icon" src="/icons/slab.png">
-          </button>
-          <div class="dropdown-menu px-2" style="width: 300px;">
-            <h5 class="dropdown-header text-center">Slab Configuration:</h5>
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <span>Length:</span>
-              <div class="d-flex">
-                <input type="number" id="slab-length" class="form-control" min="1" max="5" value="1" step="1">
-                <span class="input-group-text">tiles</span>
-              </div>
-            </div>
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <span>Height:</span>
-              <div class="d-flex">
-                <input type="number" id="slab-height" class="form-control" min="0.05" max="0.2" value="0.1" step="0.01">
-                <span class="input-group-text">m</span>
               </div>
             </div>
           </div>
@@ -245,43 +217,6 @@
           </div>
         </div>
         
-        <div style="margin-top: 10px;color: white;">Terrain:</div>
-        <div class="dropdown">
-          <button class="ui-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <div class="mini-terrain-color" style="background-color: #467a33;"></div>
-            <div class="mini-terrain-color" style="background-color: #918b89;"></div>
-            <div class="mini-terrain-color" style="background-color: #423126;"></div>
-            <div class="mini-terrain-color" style="background-color: #d78c3b;"></div>
-            <div class="mini-terrain-color" style="background-color: #363333;"></div>
-            <div class="mini-terrain-color" style="background-color: #37b4be;"></div>
-          </button>
-          <ul class="dropdown-menu">
-            <li class="dropdown-item d-flex align-items-center" data-type="grass" onclick="ui.updateTerrain(event)">
-                <span class="toolbar-icon terrain-button me-2" style="background-color: #467a33;"></span>
-                <span>Grass</span>
-            </li>
-            <li class="dropdown-item d-flex align-items-center" data-type="concrete" onclick="ui.updateTerrain(event)">
-                <span class="toolbar-icon terrain-button me-2" style="background-color: #918b89;"></span>
-                <span>Concrete</span>
-            </li>
-            <li class="dropdown-item d-flex align-items-center" data-type="dirt" onclick="ui.updateTerrain(event)">
-                <span class="toolbar-icon terrain-button me-2" style="background-color: #423126;"></span>
-                <span>Dirt</span>
-            </li>
-            <li class="dropdown-item d-flex align-items-center" data-type="sand" onclick="ui.updateTerrain(event)">
-                <span class="toolbar-icon terrain-button me-2" style="background-color: #d78c3b;"></span>
-                <span>Sand</span>
-            </li>
-            <li class="dropdown-item d-flex align-items-center" data-type="asphalt" onclick="ui.updateTerrain(event)">
-                <span class="toolbar-icon terrain-button me-2" style="background-color: #363333;"></span>
-                <span>Asphalt</span>
-            </li>
-            <li class="dropdown-item d-flex align-items-center" data-type="water" onclick="ui.updateTerrain(event)">
-                <span class="toolbar-icon terrain-button me-2" style="background-color: #37b4be;"></span>
-                <span>Water</span>
-            </li>
-          </ul>
-        </div>
       </div>
       <div id="info-panel" class="container">
       </div>

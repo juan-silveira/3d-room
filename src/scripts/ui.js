@@ -1,7 +1,6 @@
 import { Game } from './game';
 import { Object } from './sim/object';
 import { Pot } from './sim/buildings/objects/pot.js';
-import { Slab } from './sim/buildings/objects/slab.js';
 import { Tray } from './sim/buildings/objects/tray.js';
 
 // Add this global function for the HTML onclick event
@@ -267,25 +266,6 @@ export class GameUI {
     tray.edgeThickness = config.edgeThickness;
     tray.initializeTiles(); // Recreate tiles grid with new dimensions
     tray.refreshView();
-  }
-
-  /**
-   * Updates the terrain type for all tiles
-   * @param {Event} event The click event from the terrain button
-   */
-  updateTerrain(event) {
-    const target = event.target;
-    // Se o clique foi em um elemento filho, subimos até encontrar o li
-    const liElement = target.closest('li');
-    const terrain = liElement.getAttribute('data-type');
-    const room = window.game.room;
-    
-    // Update terrain for all tiles
-    for (let x = 0; x < room.width; x++) {
-      for (let y = 0; y < room.height; y++) {
-        room.setTerrain(terrain, x, y);
-      }
-    }
   }
 
   /**

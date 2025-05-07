@@ -6,7 +6,6 @@ import { Service } from './services/service.js';
 import { PlantsModule } from './buildings/modules/plants.js';
 import { TraysModule } from './buildings/modules/trays.js';
 import { PotsModule } from './buildings/modules/pots.js';
-import { SlabsModule } from './buildings/modules/slabs.js';
 import { TILE_SCALE, metersToTileUnits } from './constants.js';
 
 export class Room extends THREE.Group {
@@ -88,9 +87,17 @@ export class Room extends THREE.Group {
    */
   #potsModule;
   /**
-   * @type {SlabsModule}
+   * @type {THREE.Group}
    */
-  #slabsModule;
+  wallGroup;
+  /**
+   * @type {Object}
+   */
+  vehicleGraph;
+  /**
+   * @type {Object}
+   */
+  lastService;
 
   constructor(width, height, wallHeight = 3, wallThickness = 0.2, name = 'My Room') {
     super();
@@ -128,10 +135,14 @@ export class Room extends THREE.Group {
     this.#plantsModule = new PlantsModule(this);
     this.#traysModule = new TraysModule(this);
     this.#potsModule = new PotsModule(this);
-    this.#slabsModule = new SlabsModule(this);
     
     // Create walls after tiles
     this.createWalls();
+
+    // Create the vehicle graph
+    this.vehicleGraph = {
+      updateTile: (x, y, building) => { }
+    };
   }
 
   /**
@@ -746,9 +757,9 @@ export class Room extends THREE.Group {
         return false;
       }
       
-      // Special rule: if buildingType is cannabis-plant, it can only be placed on pots or slabs
+      // Special rule: if buildingType is cannabis-plant, it can only be placed on pots
       if (buildingType === 'cannabis-plant') {
-        console.warn('Cannabis plants can only be placed in pots or on slabs');
+        console.warn('Cannabis plants can only be placed in pots');
         return false;
       }
       
@@ -773,8 +784,6 @@ export class Room extends THREE.Group {
         this.#traysModule.updateTrayCount();
       } else if (buildingType === 'pot') {
         this.#potsModule.updatePotCount();
-      } else if (buildingType === 'slab') {
-        this.#slabsModule.updateSlabCount();
       }
       
       return true;
@@ -801,7 +810,6 @@ export class Room extends THREE.Group {
     const wasPlant = buildingType === 'cannabis-plant';
     const wasTray = buildingType === 'tray';
     const wasPot = buildingType === 'pot';
-    const wasSlab = buildingType === 'slab';
 
     if (tile.building.type === BuildingType.road) {
       this.vehicleGraph.updateTile(x, y, null);
@@ -823,20 +831,14 @@ export class Room extends THREE.Group {
     }
     if (wasTray) {
       this.#traysModule.updateTrayCount();
-      // When a tray is removed, we need to update pot and slab counts too
-      // since they may have contained pots and slabs
+      // When a tray is removed, we need to update pot counts too
+      // since they may have contained pots
       this.#potsModule.updatePotCount();
-      this.#slabsModule.updateSlabCount();
-      this.#plantsModule.updatePlantCount(); // Also update plants as they may have been on pots/slabs
+      this.#plantsModule.updatePlantCount(); // Also update plants as they may have been on pots
     }
     if (wasPot) {
       this.#potsModule.updatePotCount();
       // If a pot had a plant, update the plant count too
-      this.#plantsModule.updatePlantCount();
-    }
-    if (wasSlab) {
-      this.#slabsModule.updateSlabCount();
-      // If a slab had plants, update the plant count too
       this.#plantsModule.updatePlantCount();
     }
   }
@@ -909,36 +911,6 @@ export class Room extends THREE.Group {
   }
 
   /**
-   * Sets the terrain type for the selected tile
-   * @param {string} terrainType The type of terrain to set
-   * @param {number} x The x-coordinate of the tile
-   * @param {number} y The y-coordinate of the tile
-   */
-  setTerrain(terrainType, x, y) {
-    const tile = this.getTile(x, y);
-    if (tile) {
-      tile.terrain = terrainType;
-      tile.refreshView(this);
-    }
-  }
-
-  /**
-   * Updates the terrain type for all tiles
-   * @param {Event} event The click event from the terrain button
-   */
-  updateTerrain(event) {
-    const terrain = event.target.getAttribute('data-type');
-    const room = window.game.room;
-    
-    // Update terrain for all tiles
-    for (let x = 0; x < room.width; x++) {
-      for (let y = 0; y < room.height; y++) {
-        room.setTerrain(terrain, x, y);
-      }
-    }
-  }
-
-  /**
    * Gets the plants module for the room
    * @returns {PlantsModule}
    */
@@ -960,13 +932,5 @@ export class Room extends THREE.Group {
    */
   getPotsModule() {
     return this.#potsModule;
-  }
-
-  /**
-   * Gets the slabs module for the room
-   * @returns {SlabsModule}
-   */
-  getSlabsModule() {
-    return this.#slabsModule;
   }
 }

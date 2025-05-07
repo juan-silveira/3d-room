@@ -423,27 +423,11 @@ export class Tray extends Building {
     if (tile && tile.building) {
       const wasPlant = tile.building.type === 'cannabis-plant';
       const wasPot = tile.building.type === 'pot';
-      const wasSlab = tile.building.type === 'slab';
       
       // Check if pot has a plant before removing it
       if (wasPot && tile.building.plant) {
         // We need to update plant count if pot has plant
         tile.building.setPlant(null);
-        // Get the room to update plant count
-        const room = this.getRoom();
-        if (room) {
-          room.getPlantsModule().updatePlantCount();
-        }
-      }
-      
-      // Check if slab has plants before removing it
-      if (wasSlab && tile.building.plants) {
-        // Clear all plants from the slab
-        for (let i = 0; i < tile.building.plants.length; i++) {
-          if (tile.building.plants[i]) {
-            tile.building.setPlant(null, i);
-          }
-        }
         // Get the room to update plant count
         const room = this.getRoom();
         if (room) {
@@ -460,8 +444,6 @@ export class Tray extends Building {
       if (room) {
         if (wasPot) {
           room.getPotsModule().updatePotCount();
-        } else if (wasSlab) {
-          room.getSlabsModule().updateSlabCount();
         }
       }
     }

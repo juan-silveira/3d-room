@@ -4,7 +4,7 @@ import { Object } from './object.js';
 
 export class Tile extends Object {
   /**
-   * The type of terrain
+   * The type of terrain, set to concrete only
    * @type {string}
    */
   terrain = 'concrete';
@@ -52,8 +52,8 @@ export class Tile extends Object {
       /**
        * @type {THREE.Mesh}
        */
-      const mesh = window.assetManager.getModel(this.terrain, this);
-      mesh.name = this.terrain;
+      const mesh = window.assetManager.getModel('concrete', this);
+      mesh.name = 'concrete';
       this.setMesh(mesh);
     }
   }
@@ -80,9 +80,6 @@ export class Tile extends Object {
       <div class="info-heading">Tile</div>
       <span class="info-label">Coordinates </span>
       <span class="info-value">X: ${this.x}, Y: ${this.y}</span>
-      <br>
-      <span class="info-label">Terrain </span>
-      <span class="info-value">${this.terrain}</span>
       <br>
     `;
 

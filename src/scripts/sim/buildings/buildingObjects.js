@@ -2,7 +2,6 @@ import { BuildingType } from './buildingType.js';
 import { Building } from './building.js';
 import { CannabisPlant } from './objects/cannabisPlant.js';
 import { Pot } from './objects/pot.js';
-import { Slab } from './objects/slab.js';
 import { Tray } from './objects/tray.js';
 
 /**
@@ -18,8 +17,6 @@ export function createBuilding(x, y, type) {
       return new CannabisPlant(x, y);
     case BuildingType.pot:
       return new Pot(x, y);
-    case BuildingType.slab:
-      return new Slab(x, y);
     case BuildingType.tray:
       return new Tray(x, y);
     default:

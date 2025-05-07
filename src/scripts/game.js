@@ -6,7 +6,6 @@ import { Room } from './sim/room.js';
 import { Object } from './sim/object.js';
 import { Tile } from './sim/tile.js';
 import { Pot } from './sim/buildings/objects/pot.js';
-import { Slab } from './sim/buildings/objects/slab.js';
 import { Tray } from './sim/buildings/objects/tray.js';
 import { CannabisPlant } from './sim/buildings/objects/cannabisPlant.js';
 import { TILE_SCALE, metersToTileUnits } from './sim/constants.js';
@@ -259,7 +258,7 @@ export class Game {
       this.highlightedTiles = [];
     }
     
-    // If we're placing a multi-tile object (tray, slab), highlight all affected tiles
+    // If we're placing a multi-tile object (tray), highlight all affected tiles
     if (newObject && window.ui.activeToolId) {
       if (window.ui.activeToolId === 'tray' && newObject instanceof Tile) {
         const { x, y } = newObject;
@@ -311,34 +310,7 @@ export class Game {
             tile.setFocused(true, (allTilesAvailable && !trayOverlap) ? 0x00FF00 : 0xFF0000);
           }
         }
-      } else if (window.ui.activeToolId === 'slab' && 
-                 newObject.parent?.userData?.instance?.type === 'tray') {
-        // Handle slab highlighting on a tray
-        const tray = newObject.parent.userData.instance;
-        const trayTile = newObject;
-        const config = window.ui.getSlabConfig();
-        this.highlightedTiles = [];
-        
-        // Check if there's enough space for the slab
-        let spaceAvailable = true;
-        for (let i = 0; i < config.length; i++) {
-          const checkY = trayTile.y + i;
-          const checkTile = tray.getTile(trayTile.x, checkY);
-          if (!checkTile || checkY >= tray.length || checkTile.building) {
-            spaceAvailable = false;
-            break;
-          } else {
-            this.highlightedTiles.push(checkTile);
-          }
-        }
-        
-        // Highlight all tiles with appropriate color
-        for (const tile of this.highlightedTiles) {
-          if (tile && typeof tile.setFocused === 'function') {
-            tile.setFocused(true, spaceAvailable ? 0x00FF00 : 0xFF0000);
-          }
-        }
-      }
+      } 
     }
     
     if (newObject !== this.focusedObject) {
@@ -463,67 +435,6 @@ export class Game {
           }
         }
         break;
-      case 'slab':
-        if (this.focusedObject && this.highlightedTiles && this.highlightedTiles.length > 0) {
-          // Handle tiles on trays 
-          if (this.focusedObject instanceof Tile) {
-            // Find the parent tray
-            let tray = null;
-            
-            // Check if parentTray is directly available in userData
-            if (this.focusedObject.mesh && this.focusedObject.mesh.userData && this.focusedObject.mesh.userData.parentTray) {
-              tray = this.focusedObject.mesh.userData.parentTray;
-            } 
-            // Check each tray in the room to see if it contains this tile
-            else {
-              this.room.root.traverse(object => {
-                if (!tray && object.userData && object.userData.instance && object.userData.instance.type === 'tray') {
-                  const checkTray = object.userData.instance;
-                  // Check if this tile belongs to this tray
-                  for (let x = 0; x < checkTray.width; x++) {
-                    for (let y = 0; y < checkTray.length; y++) {
-                      if (checkTray.getTile(x, y) === this.focusedObject) {
-                        tray = checkTray;
-                        break;
-                      }
-                    }
-                    if (tray) break;
-                  }
-                }
-              });
-            }
-            
-            // If we found the parent tray, check if there's space for the slab
-            if (tray) {
-              const trayTile = this.focusedObject;
-              const config = window.ui.getSlabConfig();
-              
-              // Check if there's enough space for the slab
-              let spaceAvailable = true;
-              for (let i = 0; i < config.length; i++) {
-                const checkY = trayTile.y + i;
-                const checkTile = tray.getTile(trayTile.x, checkY);
-                if (!checkTile || checkY >= tray.length || checkTile.building) {
-                  spaceAvailable = false;
-                  break;
-                }
-              }
-              
-              // If there's enough space, place the slab
-              if (spaceAvailable) {
-                console.log("Placing slab on tray tile at", trayTile.x, trayTile.y);
-                const slab = new Slab(0, 0, config.length);
-                slab.height = config.height;
-                tray.placeBuilding(trayTile.x, trayTile.y, slab);
-                // Update the slab counter when placing on a tray
-                this.room.getSlabsModule().updateSlabCount();
-              } else {
-                console.warn("Not enough space for slab on tray");
-              }
-            }
-          }
-        }
-        break;
       case 'tray':
         if (this.focusedObject && this.highlightedTiles && this.highlightedTiles.length > 0) {
           const { x, y } = this.focusedObject;
@@ -626,22 +537,9 @@ export class Game {
               this.room.getPlantsModule().updatePlantCount();
             }
           }
-          // Case 4: Slab placement
-          else if (this.focusedObject instanceof Tile && this.focusedObject.building?.type === 'slab') {
-            const slab = this.focusedObject.building;
-            // Determine position on the slab
-            const localY = this.focusedObject.y - slab.y;
-            if (localY >= 0 && localY < slab.length && !slab.plants[localY]) {
-              console.log('Placing plant on slab at position', localY);
-              const plant = new CannabisPlant(0, 0);
-              plant.refreshView();
-              slab.setPlant(plant, localY);
-              this.room.getPlantsModule().updatePlantCount();
-            }
-          }
           // Not a valid placement location
           else {
-            console.warn('Cannabis plants can only be placed in pots or on slabs');
+            console.warn('Cannabis plants can only be placed in pots');
           }
         }
         break;
