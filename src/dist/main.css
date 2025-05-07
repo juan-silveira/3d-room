@@ -1,0 +1,608 @@
+@font-face {
+  font-family: Bebas-Regular;
+  src: url('fonts/Bebas-Regular.otf');
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: Bebas-Regular, sans-serif;
+
+  background: linear-gradient(0deg, #3a5177, #81b1e0);
+}
+
+h1 {
+  text-align: center;
+  font-size: x-large;
+  font-weight: normal;
+  margin: 0;
+  color: white;
+}
+
+.fs-8 {
+  font-size: 8px;
+}
+
+.fs-9 {
+  font-size: 9px;
+}
+
+.fs-10 {
+  font-size: 10px;
+}
+
+.fs-11 {
+  font-size: 11px;
+}
+
+.fs-12 {
+  font-size: 12px;
+}
+
+#root-window {
+  height: 100%;
+}
+
+#render-target {
+  position: relative;
+  height: 100%;
+}
+
+#version {
+  position: absolute;
+  color: white;
+  right: 0;
+  bottom: 0;
+  margin: 8px;
+}
+
+.text-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  color: white;
+  font-size: 5em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.side-menu {
+  background-color: #00000048;
+  padding: 12px;
+}
+
+#ui-toolbar {
+  position: absolute;
+  top: 49px;
+  bottom: 0px;
+  max-height: calc(100vh - 49px);
+  overflow-y: auto;
+  box-shadow: 0px 0px 1px black;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-bottom: 20px;
+}
+
+#ui-toolbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+#ui-toolbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.ui-button {
+  height: 48px;
+  width: 48px;
+  margin: 4px 0;
+
+  transition: background-color 0.1s ease-in-out;
+  
+  background-color: #1e2331cd;
+  border: none;
+  border-radius: 8px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ui-button.selected {
+  background-color: #3a3f50d3;
+  outline: 2px solid rgb(101, 101, 135);
+}
+
+.ui-button:not(.selected):hover {
+  background-color: #121622d3;
+}
+
+.ui-container {
+  background-color: #33333355;
+  padding: 16px;
+}
+
+.toolbar-icon {
+  width: 32px;
+  height: 32px;
+  pointer-events: none;
+}
+
+.terrain-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid white;
+}
+
+.mini-terrain-color {
+  width: 6px;
+  height: 6px;
+}
+
+/* TITLE BAR */
+
+#title-bar {
+  position: fixed;
+
+  top: 0;
+  left: 0px;
+  right: 0;
+  height: 48px;
+
+  background-color: #00000048;
+  color: white;
+  padding: 8px;
+
+  box-shadow: 0px 0px 1px black;
+
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+}
+
+.title-bar-items {
+  flex: 1 1 33%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5em;
+}
+
+.title-bar-items.title-bar-center-items {
+  font-size: 2em;
+}
+
+#population-icon {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  top: -3px;
+}
+
+#population-counter {
+  margin-left: 8px;
+}
+
+/* INFO PANEL */
+
+#info-panel {
+  visibility: hidden;
+  position: fixed;
+  top: 64px;
+  right: 0px;
+  padding: 0; 
+  padding-bottom: 16px;
+  width: 300px;
+
+  background-color: #00000048;
+}
+
+.info-heading {
+  text-align: center;
+  font-size: 1em;
+  margin-top: 12px;
+  margin-bottom: 12px;
+
+  background-color: #00000060;
+
+  box-shadow: 0px 0px 1px black;
+
+  color: white;
+  padding: 4px;
+}
+
+.info-heading:first-of-type {
+  margin-top: 0px;
+}
+
+.info-label {
+  margin-left: 12px;
+  font-size: 1em;
+  color: rgb(193, 193, 193)
+}
+
+.info-value {
+  margin-left: 4px;
+  font-size: 1.2em;
+  color: #ffffff;
+  text-align: right;
+}
+
+.info-citizen-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.info-citizen {
+  background-color: #222941a0;
+  color: white;
+  padding: 4px 16px;
+  margin: 4px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 0 0px #151820;
+}
+
+.info-citizen-name {
+  font-size: 1.1em;
+}
+
+.info-citizen-icon {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  top: 2px;
+  margin-right: 2px;
+}
+
+.info-citizen-details {
+  font-size: 1em;
+  display: flex;
+  justify-content: flex-start;
+  gap: 16px;
+}
+
+
+/* Plant history styling */
+.history-controls {
+  margin-bottom: 10px;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.history-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.history-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.history-entry {
+  margin-bottom: 10px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.history-entry:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.history-entry-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: rgba(0, 0, 0, 0.2);
+  color: white;
+  font-weight: bold;
+}
+
+.history-type {
+  text-transform: uppercase;
+  font-size: 0.9em;
+  letter-spacing: 0.5px;
+}
+
+.history-date {
+  font-size: 0.8em;
+  opacity: 0.8;
+}
+
+.history-entry-body {
+  padding: 10px 12px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.history-entry-body p {
+  margin: 0;
+}
+
+.history-entry-footer {
+  padding: 6px 12px;
+  background-color: rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: flex-end;
+  font-size: 0.8em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.history-empty {
+  text-align: center;
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+}
+
+/* Action type colors */
+.history-entry[data-type="Planting"] .history-type { color: #4CAF50; }
+.history-entry[data-type="Watering"] .history-type { color: #2196F3; }
+.history-entry[data-type="Nutrition"] .history-type { color: #FF9800; }
+.history-entry[data-type="Pruning"] .history-type { color: #9C27B0; }
+.history-entry[data-type="Inspection"] .history-type { color: #03A9F4; }
+.history-entry[data-type="Treatment"] .history-type { color: #F44336; }
+.history-entry[data-type="Relocation"] .history-type { color: #FFEB3B; }
+.history-entry[data-type="Harvest"] .history-type { color: #8BC34A; }
+
+/* Info panel styling improvements */
+#info-panel {
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+#info-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+#info-panel::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.info-heading {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 5px;
+}
+
+.info-label {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  margin-right: 10px;
+}
+
+.info-value {
+  color: white;
+}
+
+/* QR code and NFC elements */
+.plant-uid-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+  margin-bottom: 15px;
+}
+
+.plant-uid-qr {
+  width: 80px;
+  height: 80px;
+  background-color: white;
+  padding: 5px;
+  border-radius: 4px;
+  margin-right: 15px;
+}
+
+.plant-uid-nfc {
+  width: 60px;
+  height: 60px;
+  color: white;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  border-radius: 50%;
+  margin-right: 15px;
+}
+
+.plant-uid-text {
+  color: white;
+  font-family: monospace;
+  font-size: 1.1em;
+  letter-spacing: 1px;
+}
+
+/* Modal de instruções */
+.instructions-content {
+  color: #333;
+}
+
+.instruction-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.instruction-item:last-child {
+  border-bottom: none;
+}
+
+.instruction-label {
+  font-weight: bold;
+  font-size: 1.1em;
+  color: white;
+}
+
+.instruction-value {
+  color: #ccc;
+}
+
+/* Esconder instruções mobile por padrão */
+.mobile-only {
+  display: none;
+}
+
+/* Mostrar apenas em dispositivos com toque */
+@media (pointer: coarse) {
+  .mobile-only {
+    display: flex;
+  }
+}
+
+/* Ajuste para mobile em modo paisagem */
+@media (max-height: 500px) and (orientation: landscape) {
+  #ui-toolbar {
+    max-height: calc(100vh - 64px);
+    padding-bottom: 50px; /* Espaço para evitar que o último item fique escondido */
+  }
+  
+  /* Aumentar a altura do modal em landscape para mostrar mais conteúdo */
+  .modal-dialog {
+    max-height: 90vh;
+  }
+  
+  .modal-content {
+    max-height: 90vh;
+  }
+}
+
+/* Mobile toolbar styling */
+.vertical-layout {
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.horizontal-layout {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  max-width: 90vw;
+  justify-content: center;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.horizontal-layout .ui-button {
+  margin: 5px;
+}
+
+.mobile-config-section {
+  width: 100%;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mobile-config-item {
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-config-item span {
+  color: white;
+  margin-bottom: 5px;
+}
+
+@media (max-width: 768px) {
+  #help-button {
+    width: 30px;
+    height: 30px;
+  }
+  
+  #help-button i {
+    font-size: 16px;
+  }
+  
+  .title-bar-items {
+    font-size: 1.2em;
+  }
+  
+  .title-bar-items.title-bar-center-items {
+    font-size: 1.5em;
+  }
+}
+
+/* Estilos para os modais de configuração */
+.modal-content {
+  background-color: #2a3040;
+  color: white;
+}
+
+.modal-header {
+  border-bottom: 1px solid #3a4050;
+}
+
+.modal-footer {
+  border-top: 1px solid #3a4050;
+}
+
+.form-control {
+  background-color: #1a202c;
+  border: 1px solid #3a4050;
+  color: white;
+}
+
+.form-control:focus {
+  background-color: #1a202c;
+  border-color: #4a5060;
+  color: white;
+  box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.1);
+}
+
+.form-check-input {
+  background-color: #1a202c;
+  border: 1px solid #3a4050;
+}
+
+.form-check-input:checked {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.form-label {
+  margin-bottom: 0.3rem;
+}
+
+/* Ajustes para mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  #ui-toolbar {
+    max-height: calc(100vh - 64px);
+    padding-bottom: 50px; /* Espaço para evitar que o último item fique escondido */
+  }
+  
+  /* Estilo específico para modais em mobile */
+  .modal-dialog {
+    max-width: 90%;
+  }
+}

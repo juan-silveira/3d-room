@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="stylesheet" href="./main.css">
+  <link rel="icon" type="image/x-icon" href="./favicon.ico">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
+  
+  <script type="module" crossorigin src="./assets/index-58dab689.js"></script>
+</head>
+
+<body>
+  <div id="root-window">
+    <!-- Three.js adds a `canvas` element to this element-->
+    <div id="render-target"></div>
+    <div id="loading" class="text-overlay">
+      <div>
+        LOADING...
+      </div>
+    </div>
+    <div id="ui">
+      <div id="title-bar">
+        <div class="title-bar-left-items title-bar-items">
+          <span id="angle-label" class="me-2">Angles:</span>
+          <span class="me-1">A:</span><span id="angle-azimuth" class="me-2">0°</span>
+          <span class="me-1">E:</span><span id="angle-elevation" class="me-2">0°</span>
+          <!-- <span class="me-1">R:</span><span id="angle-rotation" class="me-2">0°</span> -->
+        </div>
+        <div class="title-bar-center-items title-bar-items">
+          <span id="room-name">My Room</span>
+        </div>
+        <div class="title-bar-right-items title-bar-items">
+          <div class="d-flex align-items-center">
+            <img id="tray-icon" src="./icons/tray.png" style="width: 20px; height: 20px;">
+            <span id="tray-counter" class="ms-2">0</span>
+          </div>
+          <div class="mx-3"></div>
+          <div class="d-flex align-items-center">
+            <img id="pot-icon" src="./icons/pot.png" style="width: 20px; height: 20px;">
+            <span id="pot-counter" class="ms-2">0</span>
+          </div>
+          <div class="mx-3"></div>
+          <div class="d-flex align-items-center">
+            <img id="slab-icon" src="./icons/slab.png" style="width: 20px; height: 20px;">
+            <span id="slab-counter" class="ms-2">0</span>
+          </div>
+          <div class="mx-3"></div>
+          <div class="d-flex align-items-center">
+            <img id="plants-icon" src="./icons/cannabis-plant.png" style="width: 20px; height: 20px;">
+            <span id="plants-counter" class="ms-2">0</span>
+          </div>
+        </div>
+      </div>
+      <div id="ui-toolbar" class="side-menu">
+        <button id='button-nav-mode' class="ui-button" style="display:none" data-type="nav-mode"
+          onclick="ui.onNavModeSelected(event)">
+          <img class="toolbar-icon" src="./icons/hand.png" alt="Navegar">
+        </button>
+        <button id='button-select' class="ui-button selected" data-type="select" onclick="ui.onToolSelected(event)">
+          <img class="toolbar-icon" src="./icons/select-color.png">
+        </button>
+        <button id='button-trash' class="ui-button" data-type="trash" onclick="ui.onToolSelected(event)">
+          <img class="toolbar-icon" src="./icons/trash.png">
+        </button>
+        <button id='button-cannabis-plant' class="ui-button" data-type="cannabis-plant"
+          onclick="ui.onToolSelected(event)">
+          <img class="toolbar-icon" src="./icons/cannabis-plant.png">
+        </button>
+        <button id='button-pot' class="ui-button" data-type="pot"
+          onclick="ui.onConfigToolClicked('pot')">
+          <img class="toolbar-icon" src="./icons/pot.png">
+        </button>
+        <button id='button-tray' class="ui-button" data-type="tray"
+          onclick="ui.onConfigToolClicked('tray')">
+          <img class="toolbar-icon" src="./icons/tray.png">
+        </button>
+        <button id='button-double-door' class="ui-button" data-type="double-door"
+          onclick="ui.onConfigToolClicked('door')">
+          <img class="toolbar-icon" src="./icons/door.png">
+        </button>
+        <button id="help-button" class="ui-button" data-bs-toggle="modal" data-bs-target="#instructionsModal">
+          <i class="fas fa-question" style="color: white; font-size: 20px;"></i>
+        </button>
+      </div>
+      
+      <div id="info-panel" class="container">
+      </div>
+      <div id="version">
+        v0.0.3
+      </div>
+    </div>
+  </div>
+
+  <!-- Instructions Modal -->
+  <div class="modal fade" id="instructionsModal" tabindex="-1" aria-labelledby="instructionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="instructionsModalLabel">Controls</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="instructions-content">
+            <!-- Content will be dynamically filled by JavaScript -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pot Configuration Modal -->
+  <div class="modal fade" id="potConfigModal" tabindex="-1" aria-labelledby="potConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="potConfigModalLabel">Pot Configuration</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="radio" name="modal-pot-shape" id="modal-pot-shape-round" value="round" checked>
+            <label class="form-check-label" for="modal-pot-shape-round">
+              Round
+            </label>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="radio" name="modal-pot-shape" id="modal-pot-shape-square" value="square">
+            <label class="form-check-label" for="modal-pot-shape-square">
+              Square
+            </label>
+          </div>
+          <div class="mb-3">
+            <label for="modal-pot-height" class="form-label">Height (m)</label>
+            <input type="number" id="modal-pot-height" class="form-control" min="0.1" max="0.5" value="0.3" step="0.01">
+          </div>
+          
+          <div id="modal-round-pot-inputs">
+            <div class="mb-3">
+              <label for="modal-pot-top-diameter" class="form-label">Top Diameter (m)</label>
+              <input type="number" id="modal-pot-top-diameter" class="form-control" min="0.1" max="0.3" value="0.25" step="0.01">
+            </div>
+            <div class="mb-3">
+              <label for="modal-pot-bottom-diameter" class="form-label">Bottom Diameter (m)</label>
+              <input type="number" id="modal-pot-bottom-diameter" class="form-control" min="0.1" max="0.3" value="0.2" step="0.01">
+            </div>
+          </div>
+          
+          <div id="modal-square-pot-inputs" style="display: none;">
+            <div class="mb-3">
+              <label for="modal-pot-top-side" class="form-label">Top Side (m)</label>
+              <input type="number" id="modal-pot-top-side" class="form-control" min="0.1" max="0.5" value="0.20" step="0.01">
+            </div>
+            <div class="mb-3">
+              <label for="modal-pot-bottom-side" class="form-label">Bottom Side (m)</label>
+              <input type="number" id="modal-pot-bottom-side" class="form-control" min="0.1" max="0.5" value="0.15" step="0.01">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="ui.applyPotConfig()">Apply and Select</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tray Configuration Modal -->
+  <div class="modal fade" id="trayConfigModal" tabindex="-1" aria-labelledby="trayConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="trayConfigModalLabel">Tray Configuration</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col-6">
+              <label for="modal-tray-width" class="form-label">Width (tiles)</label>
+              <input type="number" id="modal-tray-width" class="form-control" min="2" max="20" value="4">
+            </div>
+            <div class="col-6">
+              <label for="modal-tray-length" class="form-label">Length (tiles)</label>
+              <input type="number" id="modal-tray-length" class="form-control" min="2" max="100" value="4">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="modal-tray-leg-height" class="form-label">Leg Height (m)</label>
+            <input type="number" id="modal-tray-leg-height" class="form-control" min="0.5" max="1.5" value="0.8" step="0.01">
+          </div>
+          <div class="mb-3">
+            <label for="modal-tray-top-thickness" class="form-label">Top Thickness (m)</label>
+            <input type="number" id="modal-tray-top-thickness" class="form-control" min="0.01" max="0.1" value="0.05" step="0.01">
+          </div>
+          <div class="mb-3">
+            <label for="modal-tray-edge-height" class="form-label">Edge Height (m)</label>
+            <input type="number" id="modal-tray-edge-height" class="form-control" min="0.05" max="0.2" value="0.1" step="0.01">
+          </div>
+          <div class="mb-3">
+            <label for="modal-tray-edge-thickness" class="form-label">Edge Thickness (m)</label>
+            <input type="number" id="modal-tray-edge-thickness" class="form-control" min="0.01" max="0.05" value="0.03" step="0.01">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="ui.applyTrayConfig()">Apply and Select</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Door Configuration Modal -->
+  <div class="modal fade" id="doorConfigModal" tabindex="-1" aria-labelledby="doorConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="doorConfigModalLabel">Door Configuration</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="modal-door-width" class="form-label">Door Width (tiles)</label>
+            <input type="number" id="modal-door-width" class="form-control" min="3" max="8" value="4">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="ui.applyDoorConfig()">Apply and Select</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq"
+    crossorigin="anonymous"></script>
+</body>
+
+</html>
