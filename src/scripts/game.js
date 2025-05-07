@@ -9,6 +9,7 @@ import { Pot } from './sim/buildings/objects/pot.js';
 import { Tray } from './sim/buildings/objects/tray.js';
 import { CannabisPlant } from './sim/buildings/objects/cannabisPlant.js';
 import { TILE_SCALE, metersToTileUnits } from './sim/constants.js';
+import { mockDatabase, mockDatabaseMethods } from './data/mockDatabase.js';
 
 /** 
  * Manager for the Three.js scene. Handles rendering of a `Room` object
@@ -38,6 +39,11 @@ export class Game {
    * @type {Tile | null}
    */
   selectedTile = null;
+  /**
+   * Timestamp of the last info panel update
+   * @type {number}
+   */
+  lastInfoPanelUpdate = 0;
   _lastTouch = { x: null, y: null, dist: null };
   highlightedTiles = [];
 
@@ -89,6 +95,9 @@ export class Game {
     this.scene.add(room);
     this.#setupLights();
     this.#setupGrid(room);
+    
+    // Try to load saved room data
+    this.#loadRoomDataFromDatabase(room);
   }
 
   #setupGrid(room) {
@@ -233,8 +242,12 @@ export class Game {
     // Update the room data model first, then update the scene
     this.room.simulate(1);
 
-    // window.ui.updateTitleBar(this);
-    window.ui.updateInfoPanel(this.selectedObject);
+    // Only update the info panel every 10 seconds
+    const currentTime = Date.now();
+    if (currentTime - this.lastInfoPanelUpdate > 60000) {
+      window.ui.updateInfoPanel(this.selectedObject);
+      this.lastInfoPanelUpdate = currentTime;
+    }
   }
 
   /**
@@ -332,12 +345,15 @@ export class Game {
     switch (window.ui.activeToolId) {
       case 'select':
         this.updateSelectedObject();
-        window.ui.updateInfoPanel(this.selectedObject);
+        // Info panel is already updated in updateSelectedObject
         break;
       case 'trash':
         if (this.focusedObject) {
           const { x, y } = this.focusedObject;
           this.room.trash(x, y);
+          // Update panel immediately since the object was removed
+          window.ui.updateInfoPanel(this.selectedObject);
+          this.lastInfoPanelUpdate = Date.now();
         }
         break;
       case 'double-door':
@@ -347,6 +363,9 @@ export class Game {
           if (x === 0 || x === this.room.width - 1 || y === 0 || y === this.room.height - 1) {
             const doorWidth = window.ui.getDoorWidth();
             this.room.placeDoor(x, y, doorWidth);
+            // Update panel immediately
+            window.ui.updateInfoPanel(this.selectedObject);
+            this.lastInfoPanelUpdate = Date.now();
           } else {
             console.warn('Doors can only be placed on the edge of the room');
           }
@@ -409,21 +428,24 @@ export class Game {
                 const pot = new Pot(0, 0);
                 window.ui.configurePot(pot);
                 
-                // Use tray's local coordinates for placement
-                const localX = trayTile.x;
-                const localY = trayTile.y;
+                // Usar a nova função para encontrar as coordenadas locais do tile na tray
+                const localCoords = tray.findTileLocalCoordinates(trayTile);
                 
-                // Let's add more logging to debug
-                console.log(`Pot placement - Tray position: (${tray.x}, ${tray.y}), Local tile: (${localX}, ${localY})`);
-                
-                try {
-                  // Place the pot using local coordinates
-                  tray.placeBuilding(localX, localY, pot);
+                if (localCoords) {
+                  const { x: localX, y: localY } = localCoords;
+                  console.log(`Found local tray coordinates: (${localX}, ${localY})`);
                   
-                  // Update the pot counter when placing on a tray
-                  this.room.getPotsModule().updatePotCount();
-                } catch (error) {
-                  console.error("Error placing pot on tray:", error);
+                  try {
+                    // Place the pot using local coordinates
+                    tray.placeBuilding(localX, localY, pot);
+                    
+                    // Update the pot counter when placing on a tray
+                    this.room.getPotsModule().updatePotCount();
+                  } catch (error) {
+                    console.error("Error placing pot on tray:", error);
+                  }
+                } else {
+                  console.error("Failed to determine local coordinates for tile:", trayTile);
                 }
               }
             } else {
@@ -509,10 +531,18 @@ export class Game {
             const pot = this.focusedObject;
             if (!pot.plant) {
               console.log('Placing plant directly on pot object');
+              
+              // Create a new plant with random data from the mock database or random generation
               const plant = new CannabisPlant(0, 0);
               plant.refreshView();
+              
+              // Assign the plant to the pot
               pot.setPlant(plant);
               this.room.getPlantsModule().updatePlantCount();
+              
+              // Update info panel immediately after placing a plant
+              window.ui.updateInfoPanel(this.selectedObject);
+              this.lastInfoPanelUpdate = Date.now();
             }
           }
           // Case 2: Pot selected via mesh
@@ -520,10 +550,18 @@ export class Game {
             const pot = this.focusedObject.userData.instance;
             if (!pot.plant) {
               console.log('Placing plant on pot (via mesh userData)');
+              
+              // Create a new plant with random data from the mock database or random generation
               const plant = new CannabisPlant(0, 0);
               plant.refreshView();
+              
+              // Assign the plant to the pot
               pot.setPlant(plant);
               this.room.getPlantsModule().updatePlantCount();
+              
+              // Update info panel immediately after placing a plant
+              window.ui.updateInfoPanel(this.selectedObject);
+              this.lastInfoPanelUpdate = Date.now();
             }
           }
           // Case 3: Tile with pot building
@@ -531,10 +569,18 @@ export class Game {
             const pot = this.focusedObject.building;
             if (!pot.plant) {
               console.log('Placing plant on pot (via tile.building)');
+              
+              // Create a new plant with random data from the mock database or random generation
               const plant = new CannabisPlant(0, 0);
               plant.refreshView();
+              
+              // Assign the plant to the pot
               pot.setPlant(plant);
               this.room.getPlantsModule().updatePlantCount();
+              
+              // Update info panel immediately after placing a plant
+              window.ui.updateInfoPanel(this.selectedObject);
+              this.lastInfoPanelUpdate = Date.now();
             }
           }
           // Not a valid placement location
@@ -546,7 +592,13 @@ export class Game {
       default:
         if (this.focusedObject) {
           const { x, y } = this.focusedObject;
-          this.room.placeBuilding(x, y, window.ui.activeToolId);
+          const result = this.room.placeBuilding(x, y, window.ui.activeToolId);
+          
+          // Update info panel immediately after placing a building
+          if (result) {
+            window.ui.updateInfoPanel(this.selectedObject);
+            this.lastInfoPanelUpdate = Date.now();
+          }
         }
         break;
     }
@@ -566,6 +618,10 @@ export class Game {
     } else {
       this.selectedTile = null;
     }
+    
+    // Update the info panel immediately when a new object is selected
+    window.ui.updateInfoPanel(this.selectedObject);
+    this.lastInfoPanelUpdate = Date.now();
   }
 
   /**
@@ -646,6 +702,94 @@ export class Game {
   onResize() {
     this.cameraManager.resize(window.ui.gameWindow);
     this.renderer.setSize(window.ui.gameWindow.clientWidth, window.ui.gameWindow.clientHeight);
+  }
+
+  /**
+   * Loads room data from the mock database
+   * @param {Room} room The room to populate
+   * @private
+   */
+  #loadRoomDataFromDatabase(room) {
+    try {
+      // Get the first room from the mock database (we could make this configurable later)
+      const roomData = mockDatabase.rooms[0];
+      if (!roomData) return;
+      
+      // Set room name
+      room.name = roomData.name;
+      
+      // Load equipment
+      const equipment = mockDatabaseMethods.getRoomEquipment(roomData.id);
+      
+      // Place trays
+      if (equipment.trays && equipment.trays.length > 0) {
+        for (const trayData of equipment.trays) {
+          const { x, y } = trayData.position;
+          
+          // Place tray at position
+          room.placeBuilding(x, y, 'tray');
+          
+          // Get the tile with the tray
+          const tile = room.getTile(x, y);
+          if (tile && tile.building && tile.building.type === 'tray') {
+            const tray = tile.building;
+            
+            // Configure tray dimensions
+            tray.width = trayData.dimensions.width;
+            tray.length = trayData.dimensions.length;
+            tray.legHeight = trayData.dimensions.legHeight;
+            tray.topThickness = trayData.dimensions.topThickness;
+            tray.edgeHeight = trayData.dimensions.edgeHeight;
+            tray.edgeThickness = trayData.dimensions.edgeThickness;
+            
+            // Initialize tiles
+            tray.initializeTiles();
+            tray.refreshView();
+            
+            // Place pots in this tray
+            const trayPots = equipment.pots.filter(pot => pot.trayId === trayData.id);
+            for (const potData of trayPots) {
+              const { x: potX, y: potY } = potData.position;
+              
+              // Create a new pot with the specified shape and dimensions
+              const pot = new Pot(0, 0, potData.shape);
+              pot.height = potData.dimensions.height;
+              
+              if (pot.shape === 'round') {
+                pot.topDiameter = potData.dimensions.topDiameter;
+                pot.bottomDiameter = potData.dimensions.bottomDiameter;
+              } else {
+                pot.topSide = potData.dimensions.topSide;
+                pot.bottomSide = potData.dimensions.bottomSide;
+              }
+              
+              // Place pot on tray
+              tray.placeBuilding(potX, potY, pot);
+              
+              // Place plant if this pot has a plant
+              if (potData.plantId) {
+                const plantData = mockDatabase.plants.find(p => p.id === potData.plantId);
+                if (plantData) {
+                  // Create plant using data from database
+                  const plant = new CannabisPlant(0, 0, plantData);
+                  plant.refreshView();
+                  pot.setPlant(plant);
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      // Update UI counters
+      room.getPotsModule().updatePotCount();
+      room.getPlantsModule().updatePlantCount();
+      room.getTraysModule().updateTrayCount();
+      
+      console.log('Room data loaded from mock database');
+    } catch (error) {
+      console.error('Error loading room data from database:', error);
+    }
   }
 }
 

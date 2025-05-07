@@ -84,11 +84,17 @@ export class Tray extends Building {
         );
         tile.refreshView();
         
+        // Adicionar atributos personalizados para facilitar o posicionamento
+        tile.localX = x;  // Coordenada local X na tray
+        tile.localY = y;  // Coordenada local Y na tray
+        
         // Importante: Garantir que cada tile tenha um link para a tray pai
         if (tile.mesh) {
           tile.mesh.userData = {
             instance: tile,
             parentTray: this,
+            localX: x,  // Adicionar coordenadas locais em userData
+            localY: y,  // para facilitar o acesso
             id: Math.random().toString(36).substr(2, 9)
           };
         }
@@ -114,6 +120,8 @@ export class Tray extends Building {
           tile.mesh.userData = {
             instance: tile,
             parentTray: this,
+            localX: x,
+            localY: y,
             id: Math.random().toString(36).substr(2, 9)
           };
         }
@@ -334,13 +342,27 @@ export class Tray extends Building {
     let localX = x;
     let localY = y;
     
-    // If x or y are greater than the tray dimensions, they might be global coordinates
-    // Check if they are relative to room coordinates and convert them
-    if (x >= this.width || y >= this.length) {
-      // Try to convert from room coordinates to tray-local coordinates
-      localX = x - this.x;
-      localY = y - this.y;
-      console.log(`Converting coordinates from (${x}, ${y}) to local (${localX}, ${localY})`);
+    // Use raw local coordinates if we're working with a tray tile
+    if (typeof x === 'number' && typeof y === 'number') {
+      // Check if the tile at x,y belongs to this tray
+      const foundTile = this.getTile(x, y);
+      if (foundTile) {
+        // These are already local coordinates
+        console.log(`Using local tray coordinates: (${x}, ${y})`);
+        localX = x;
+        localY = y;
+      } else {
+        // These might be room coordinates; convert to local tray coordinates
+        localX = x - this.x;
+        localY = y - this.y;
+        console.log(`Converting room coordinates (${x}, ${y}) to local tray coordinates: (${localX}, ${localY})`);
+      }
+    }
+    
+    // Ensure coordinates are within tray bounds
+    if (localX < 0 || localX >= this.width || localY < 0 || localY >= this.length) {
+      console.error(`Local coordinates (${localX}, ${localY}) are outside the tray bounds (${this.width}x${this.length})`);
+      return;
     }
     
     const tile = this.getTile(localX, localY);
@@ -408,7 +430,7 @@ export class Tray extends Building {
         console.log("Building placed successfully", building);
       }
     } else {
-      console.error(`No tile found at ${localX}, ${localY} on tray (original coordinates: ${x}, ${y})`);
+      console.error(`No tile found at local coordinates (${localX}, ${localY}) on tray`);
     }
   }
 
@@ -516,5 +538,51 @@ export class Tray extends Building {
     `;
     
     return html;
+  }
+
+  /**
+   * Encontra as coordenadas locais de um Tile dentro desta Tray
+   * @param {Tile} tile O tile para encontrar
+   * @returns {{x: number, y: number}|null} Coordenadas locais ou null se não encontrado
+   */
+  findTileLocalCoordinates(tile) {
+    // Primeiro verificar os atributos personalizados
+    if (tile.localX !== undefined && tile.localY !== undefined) {
+      return { x: tile.localX, y: tile.localY };
+    }
+    
+    // Verificar o userData
+    if (tile.mesh && tile.mesh.userData && 
+        tile.mesh.userData.localX !== undefined && 
+        tile.mesh.userData.localY !== undefined) {
+      return { 
+        x: tile.mesh.userData.localX, 
+        y: tile.mesh.userData.localY 
+      };
+    }
+    
+    // Busca exaustiva
+    for (let x = 0; x < this.width; x++) {
+      for (let y = 0; y < this.length; y++) {
+        if (this.getTile(x, y) === tile) {
+          return { x, y };
+        }
+      }
+    }
+    
+    // Última tentativa: tentar converter de coordenadas globais
+    if (tile.x !== undefined && tile.y !== undefined && 
+        this.x !== undefined && this.y !== undefined) {
+      const localX = tile.x - this.x;
+      const localY = tile.y - this.y;
+      
+      // Verificar se as coordenadas locais calculadas estão dentro dos limites da tray
+      if (localX >= 0 && localX < this.width && 
+          localY >= 0 && localY < this.length) {
+        return { x: localX, y: localY };
+      }
+    }
+    
+    return null;
   }
 } 

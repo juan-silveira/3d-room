@@ -5,8 +5,10 @@
   <meta charset="utf-8">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet"
     integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link rel="stylesheet" href="/main.css">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script type="module" src="./scripts/game.js"></script>
   <script type="module" src="./scripts/ui.js"></script>
 </head>
@@ -69,168 +71,172 @@
           <img class="toolbar-icon" src="/icons/cannabis-plant.png">
         </button>
         <button id='button-pot' class="ui-button" data-type="pot"
-          onclick="ui.onToolSelected(event)">
+          onclick="ui.onConfigToolClicked('pot')">
           <img class="toolbar-icon" src="/icons/pot.png">
         </button>
         <button id='button-tray' class="ui-button" data-type="tray"
-          onclick="ui.onToolSelected(event)">
+          onclick="ui.onConfigToolClicked('tray')">
           <img class="toolbar-icon" src="/icons/tray.png">
         </button>
         <button id='button-double-door' class="ui-button" data-type="double-door"
-          onclick="ui.onToolSelected(event)">
+          onclick="ui.onConfigToolClicked('door')">
           <img class="toolbar-icon" src="/icons/door.png">
         </button>
-        
-        <div style="margin-top: 10px;color: white;">Pot:</div>
-        <div class="dropdown">
-          <button class="ui-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <img class="toolbar-icon" src="/icons/pot.png">
-          </button>
-          <div class="dropdown-menu px-2" style="width: 300px;">
-            <h5 class="dropdown-header text-center">Pot Configuration:</h5>
-            <div class="form-check mb-2">
-              <input class="form-check-input" type="radio" name="pot-shape" id="pot-shape-round" value="round" checked onchange="togglePotInputs()">
-              <label class="form-check-label" for="pot-shape-round">
-                Round
-              </label>
-            </div>
-            <div class="form-check mb-2">
-              <input class="form-check-input" type="radio" name="pot-shape" id="pot-shape-square" value="square" onchange="togglePotInputs()">
-              <label class="form-check-label" for="pot-shape-square">
-                Square
-              </label>
-            </div>
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <span>Height:</span>
-              <div class="d-flex">
-                <input type="number" id="pot-height" class="form-control" min="0.1" max="0.5" value="0.3" step="0.01">
-                <span class="input-group-text">m</span>
-              </div>
-            </div>
-            
-            <!-- Round pot inputs -->
-            <div id="round-pot-inputs">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <span>Top Diameter:</span>
-                <div class="d-flex">
-                  <input type="number" id="pot-top-diameter" class="form-control" min="0.1" max="0.3" value="0.25" step="0.01">
-                  <span class="input-group-text">m</span>
-                </div>
-              </div>
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <span>Bottom Diameter:</span>
-                <div class="d-flex">
-                  <input type="number" id="pot-bottom-diameter" class="form-control" min="0.1" max="0.3" value="0.2" step="0.01">
-                  <span class="input-group-text">m</span>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Square pot inputs -->
-            <div id="square-pot-inputs" style="display: none;">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <span>Top Side:</span>
-                <div class="d-flex">
-                  <input type="number" id="pot-top-side" class="form-control" min="0.1" max="0.5" value="0.20" step="0.01">
-                  <span class="input-group-text">m</span>
-                </div>
-              </div>
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <span>Bottom Side:</span>
-                <div class="d-flex">
-                  <input type="number" id="pot-bottom-side" class="form-control" min="0.1" max="0.5" value="0.15" step="0.01">
-                  <span class="input-group-text">m</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div style="margin-top: 10px;color: white;">Tray:</div>
-        <div class="dropdown">
-          <button class="ui-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <img class="toolbar-icon" src="/icons/tray.png">
-          </button>
-          <div class="dropdown-menu px-2" style="width: 300px;">
-            <h5 class="dropdown-header text-center">Tray Configuration:</h5>
-            <div class="row">
-              <div class="col-4">Dimensions:</div>
-              <div class="col-3">Width</div>
-              <div class="col-2"></div>
-              <div class="col-3">Length</div>
-            </div>
-            <div class="row mb-2">
-              <div class="col-4"></div>
-              <div class="col-3">
-                <input type="number" id="tray-width" class="form-control" min="2" max="20" value="4">
-              </div>
-              <div class="col-2 text-center">x</div>
-              <div class="col-3">
-                <input type="number" id="tray-length" class="form-control" min="2" max="100" value="4">
-              </div>
-            </div>
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <span>Leg Height:</span>
-              <div class="d-flex">
-                <input type="number" id="tray-leg-height" class="form-control" min="0.5" max="1.5" value="0.8" step="0.01">
-                <span class="input-group-text">m</span>
-              </div>
-            </div>
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <span>Top Thickness:</span>
-              <div class="d-flex">
-                <input type="number" id="tray-top-thickness" class="form-control" min="0.01" max="0.1" value="0.05" step="0.01">
-                <span class="input-group-text">m</span>
-              </div>
-            </div>
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <span>Edge Height:</span>
-              <div class="d-flex">
-                <input type="number" id="tray-edge-height" class="form-control" min="0.05" max="0.2" value="0.1" step="0.01">
-                <span class="input-group-text">m</span>
-              </div>
-            </div>
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <span>Edge Thickness:</span>
-              <div class="d-flex">
-                <input type="number" id="tray-edge-thickness" class="form-control" min="0.01" max="0.05" value="0.03" step="0.01">
-                <span class="input-group-text">m</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div style="margin-top: 10px;color: white;">Door Size:</div>
-        <div class="dropdown">
-          <button class="ui-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <img class="toolbar-icon" src="/icons/door.png">
-          </button>
-          <div class="dropdown-menu px-2" style="width: 300px;">
-            <h5 class="dropdown-header text-center">Door Configuration:</h5>
-            <div class="d-flex align-items-center justify-content-between">
-              <span>Door Width:</span>
-              <div class="d-flex">
-                <input type="number" id="door-width" class="form-control" min="3" max="8" value="4">
-                <span class="input-group-text" style="min-width: 55px;">tiles</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
+        <button id="help-button" class="ui-button" data-bs-toggle="modal" data-bs-target="#instructionsModal">
+          <i class="fas fa-question" style="color: white; font-size: 20px;"></i>
+        </button>
       </div>
+      
       <div id="info-panel" class="container">
       </div>
       <div id="version">
-        v0.3.0
-      </div>
-      <div id="instructions">
-        INTERACT - Left Mouse<br>
-        ROTATE - Right Mouse<br>
-        PAN - Control + Right Mouse<br>
-        ZOOM - Scroll
+        v0.0.3
       </div>
     </div>
   </div>
+
+  <!-- Instructions Modal -->
+  <div class="modal fade" id="instructionsModal" tabindex="-1" aria-labelledby="instructionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="instructionsModalLabel">Controls</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="instructions-content">
+            <!-- Content will be dynamically filled by JavaScript -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pot Configuration Modal -->
+  <div class="modal fade" id="potConfigModal" tabindex="-1" aria-labelledby="potConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="potConfigModalLabel">Pot Configuration</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="radio" name="modal-pot-shape" id="modal-pot-shape-round" value="round" checked>
+            <label class="form-check-label" for="modal-pot-shape-round">
+              Round
+            </label>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="radio" name="modal-pot-shape" id="modal-pot-shape-square" value="square">
+            <label class="form-check-label" for="modal-pot-shape-square">
+              Square
+            </label>
+          </div>
+          <div class="mb-3">
+            <label for="modal-pot-height" class="form-label">Height (m)</label>
+            <input type="number" id="modal-pot-height" class="form-control" min="0.1" max="0.5" value="0.3" step="0.01">
+          </div>
+          
+          <div id="modal-round-pot-inputs">
+            <div class="mb-3">
+              <label for="modal-pot-top-diameter" class="form-label">Top Diameter (m)</label>
+              <input type="number" id="modal-pot-top-diameter" class="form-control" min="0.1" max="0.3" value="0.25" step="0.01">
+            </div>
+            <div class="mb-3">
+              <label for="modal-pot-bottom-diameter" class="form-label">Bottom Diameter (m)</label>
+              <input type="number" id="modal-pot-bottom-diameter" class="form-control" min="0.1" max="0.3" value="0.2" step="0.01">
+            </div>
+          </div>
+          
+          <div id="modal-square-pot-inputs" style="display: none;">
+            <div class="mb-3">
+              <label for="modal-pot-top-side" class="form-label">Top Side (m)</label>
+              <input type="number" id="modal-pot-top-side" class="form-control" min="0.1" max="0.5" value="0.20" step="0.01">
+            </div>
+            <div class="mb-3">
+              <label for="modal-pot-bottom-side" class="form-label">Bottom Side (m)</label>
+              <input type="number" id="modal-pot-bottom-side" class="form-control" min="0.1" max="0.5" value="0.15" step="0.01">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="ui.applyPotConfig()">Apply and Select</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tray Configuration Modal -->
+  <div class="modal fade" id="trayConfigModal" tabindex="-1" aria-labelledby="trayConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="trayConfigModalLabel">Tray Configuration</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col-6">
+              <label for="modal-tray-width" class="form-label">Width (tiles)</label>
+              <input type="number" id="modal-tray-width" class="form-control" min="2" max="20" value="4">
+            </div>
+            <div class="col-6">
+              <label for="modal-tray-length" class="form-label">Length (tiles)</label>
+              <input type="number" id="modal-tray-length" class="form-control" min="2" max="100" value="4">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="modal-tray-leg-height" class="form-label">Leg Height (m)</label>
+            <input type="number" id="modal-tray-leg-height" class="form-control" min="0.5" max="1.5" value="0.8" step="0.01">
+          </div>
+          <div class="mb-3">
+            <label for="modal-tray-top-thickness" class="form-label">Top Thickness (m)</label>
+            <input type="number" id="modal-tray-top-thickness" class="form-control" min="0.01" max="0.1" value="0.05" step="0.01">
+          </div>
+          <div class="mb-3">
+            <label for="modal-tray-edge-height" class="form-label">Edge Height (m)</label>
+            <input type="number" id="modal-tray-edge-height" class="form-control" min="0.05" max="0.2" value="0.1" step="0.01">
+          </div>
+          <div class="mb-3">
+            <label for="modal-tray-edge-thickness" class="form-label">Edge Thickness (m)</label>
+            <input type="number" id="modal-tray-edge-thickness" class="form-control" min="0.01" max="0.05" value="0.03" step="0.01">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="ui.applyTrayConfig()">Apply and Select</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Door Configuration Modal -->
+  <div class="modal fade" id="doorConfigModal" tabindex="-1" aria-labelledby="doorConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="doorConfigModalLabel">Door Configuration</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="modal-door-width" class="form-label">Door Width (tiles)</label>
+            <input type="number" id="modal-door-width" class="form-control" min="3" max="8" value="4">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="ui.applyDoorConfig()">Apply and Select</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq"
     crossorigin="anonymous"></script>
