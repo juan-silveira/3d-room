@@ -807,40 +807,69 @@ export class Room extends THREE.Group {
     if (!tile.building) return;
 
     const buildingType = tile.building.type;
-    const wasPlant = buildingType === 'cannabis-plant';
-    const wasTray = buildingType === 'tray';
-    const wasPot = buildingType === 'pot';
-
-    if (tile.building.type === BuildingType.road) {
-      this.vehicleGraph.updateTile(x, y, null);
+    const isPlant = buildingType === 'cannabis-plant';
+    const isTray = buildingType === 'tray';
+    const isPot = buildingType === 'pot';
+    
+    // Caso 1: Se for uma planta, remover somente a planta
+    if (isPlant) {
+      console.log("Trashing plant at", x, y);
+      // Proceder com a remoção da planta
+      tile.building.dispose();
+      tile.setBuilding(null);
+      tile.refreshView(this);
+      
+      // Atualizar a contagem de plantas
+      this.#plantsModule.updatePlantCount();
     }
+    // Caso 2: Se for um pot e tiver uma planta em cima, avisar que precisa remover a planta primeiro
+    else if (isPot && tile.building.plant) {
+      console.log("Cannot trash pot with plant at", x, y);
+      alert('O vaso não está vazio. Remova a planta primeiro antes de excluir o vaso.');
+      return; // Não prosseguir com a remoção
+    }
+    // Caso 3: Se for uma tray, verificar se está vazia usando o método isEmpty
+    else if (isTray) {
+      console.log("Checking if tray is empty at", x, y);
+      // Verificar se a tray está vazia usando o novo método
+      const tray = tile.building;
+      if (!tray.isEmpty()) {
+        console.log("Tray is not empty");
+        alert('A bandeja não está vazia. Remova todos os objetos da bandeja primeiro antes de excluí-la.');
+        return; // Não prosseguir com a remoção
+      }
+      
+      console.log("Trashing empty tray at", x, y);
+      // Se a tray estiver vazia, proceder com a remoção
+      tile.building.dispose();
+      tile.setBuilding(null);
+      tile.refreshView(this);
+      
+      // Atualizar a contagem de trays
+      this.#traysModule.updateTrayCount();
+    }
+    // Caso 4: Qualquer outro tipo de objeto
+    else {
+      console.log("Trashing other object at", x, y);
+      if (tile.building.type === BuildingType.road) {
+        this.vehicleGraph.updateTile(x, y, null);
+      }
 
-    tile.building.dispose();
-    tile.setBuilding(null);
-    tile.refreshView(this);
+      tile.building.dispose();
+      tile.setBuilding(null);
+      tile.refreshView(this);
+      
+      // Atualizar contadores conforme o tipo do objeto
+      if (isPot) {
+        this.#potsModule.updatePotCount();
+      }
+    }
 
     // Update neighboring tiles in case they need to change their mesh (e.g. roads)
     this.getTile(x - 1, y)?.refreshView(this);
     this.getTile(x + 1, y)?.refreshView(this);
     this.getTile(x, y - 1)?.refreshView(this);
     this.getTile(x, y + 1)?.refreshView(this);
-
-    // Atualiza a contagem de plantas se uma planta foi removida
-    if (wasPlant) {
-      this.#plantsModule.updatePlantCount();
-    }
-    if (wasTray) {
-      this.#traysModule.updateTrayCount();
-      // When a tray is removed, we need to update pot counts too
-      // since they may have contained pots
-      this.#potsModule.updatePotCount();
-      this.#plantsModule.updatePlantCount(); // Also update plants as they may have been on pots
-    }
-    if (wasPot) {
-      this.#potsModule.updatePotCount();
-      // If a pot had a plant, update the plant count too
-      this.#plantsModule.updatePlantCount();
-    }
   }
 
   /**

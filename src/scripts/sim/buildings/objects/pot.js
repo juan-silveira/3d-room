@@ -371,119 +371,135 @@ createTruncatedPyramidGeometry(bottomWidth, topWidth, height) {
 }
 
 /**
- * Helper method to create a truncated pyramid geometry
- * @param {number} bottomWidth - Width of the bottom face
- * @param {number} topWidth - Width of the top face
- * @param {number} height - Height of the pyramid
- * @returns {THREE.BufferGeometry}
+ * Add a plant to this pot or remove the current plant
+ * @param {Building|null} plant The plant to add, or null to remove current plant
  */
-createTruncatedPyramidGeometry(bottomWidth, topWidth, height) {
-  const geometry = new THREE.BufferGeometry();
-  
-  // Define the 8 corners of the truncated pyramid
-  const halfBottomWidth = bottomWidth / 2;
-  const halfTopWidth = topWidth / 2;
-  
-  // Define vertices (bottom 4 corners, then top 4 corners)
-  const vertices = new Float32Array([
-    // Bottom layer (y = 0)
-    -halfBottomWidth, 0, -halfBottomWidth,
-    halfBottomWidth, 0, -halfBottomWidth,
-    halfBottomWidth, 0, halfBottomWidth,
-    -halfBottomWidth, 0, halfBottomWidth,
+setPlant(plant) {
+  // Caso: Remover planta existente
+  if (this.plant && !plant) {
+    console.log("Removing plant from pot", this.plant);
     
-    // Top layer (y = height)
-    -halfTopWidth, height, -halfTopWidth,
-    halfTopWidth, height, -halfTopWidth,
-    halfTopWidth, height, halfTopWidth,
-    -halfTopWidth, height, halfTopWidth
-  ]);
-  
-  // Define faces (triangles) using indices
-  const indices = [
-    // Bottom face
-    0, 1, 2,
-    0, 2, 3,
+    // Salvar referência à planta atual
+    const oldPlant = this.plant;
     
-    // Top face
-    4, 6, 5,
-    4, 7, 6,
+    // Limpar referência no pot primeiro
+    this.plant = null;
     
-    // Side faces
-    0, 4, 1,
-    1, 4, 5,
-    
-    1, 5, 2,
-    2, 5, 6,
-    
-    2, 6, 3,
-    3, 6, 7,
-    
-    3, 7, 0,
-    0, 7, 4
-  ];
-  
-  geometry.setIndex(indices);
-  geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-  geometry.computeVertexNormals();
-  
-  return geometry;
-}
-  
-  /**
-   * Add a plant to this pot
-   * @param {Building} plant The plant to add
-   */
-  setPlant(plant) {
-    this.plant = plant;
-    if (plant) {
-      // Add the plant to the pot's scene graph
-      this.add(plant);
-      
-      // Position the plant at the top center of the pot
-      const potHeight = metersToTileUnits(this.height);
-      plant.position.set(0, potHeight - 0.05, 0);
-    }
-  }
-
-  /**
-   * Returns HTML representation for the info panel
-   * @returns {string}
-   */
-  toHTML() {
-    let html = super.toHTML();
-    html += `
-      <div class="info-heading">Pot</div>
-      <span class="info-label">Shape</span>
-      <span class="info-value">${this.shape}</span>
-      <br>
-      <span class="info-label">Height</span>
-      <span class="info-value">${this.height.toFixed(2)} m</span>
-      <br>`;
-      
-    if (this.shape === 'round') {
-      html += `
-        <span class="info-label">Top Diameter</span>
-        <span class="info-value">${this.topDiameter.toFixed(2)} m</span>
-        <br>
-        <span class="info-label">Bottom Diameter</span>
-        <span class="info-value">${this.bottomDiameter.toFixed(2)} m</span>
-        <br>`;
+    // Remover a planta da cena 3D
+    if (oldPlant.parent === this) {
+      this.remove(oldPlant);
+      console.log("Plant removed from parent");
     } else {
-      html += `
-        <span class="info-label">Top Side</span>
-        <span class="info-value">${this.topSide.toFixed(2)} m</span>
-        <br>
-        <span class="info-label">Bottom Side</span>
-        <span class="info-value">${this.bottomSide.toFixed(2)} m</span>
-        <br>`;
+      console.warn("Plant parent was not pot:", oldPlant.parent);
     }
     
-    html += `
-      <span class="info-label">Plant</span>
-      <span class="info-value">${this.plant ? this.plant.name : 'None'}</span>
-      <br>
-    `;
-    return html;
+    // Limpar recursos
+    try {
+      if (oldPlant.mesh) {
+        oldPlant.mesh.traverse(obj => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) {
+              obj.material.forEach(m => m.dispose());
+            } else {
+              obj.material.dispose();
+            }
+          }
+        });
+      }
+      
+      oldPlant.dispose();
+      console.log("Plant disposed");
+    } catch (error) {
+      console.error("Error disposing plant:", error);
+    }
+    
+    // Atualizar a visualização do pot
+    this.refreshView();
+    console.log("Pot refreshed after plant removal");
+    return;
   }
+  
+  // Caso: Adicionar nova planta
+  if (plant) {
+    console.log("Adding plant to pot", plant);
+    
+    // Limpar planta anterior, se existir
+    if (this.plant) {
+      console.warn("Replacing existing plant");
+      this.setPlant(null);
+    }
+    
+    // Definir a nova planta
+    this.plant = plant;
+    
+    // Add the plant to the pot's scene graph
+    this.add(plant);
+    
+    // Position the plant at the top center of the pot
+    const potHeight = metersToTileUnits(this.height);
+    plant.position.set(0, potHeight - 0.05, 0);
+    
+    console.log("Plant added successfully");
+  }
+}
+
+/**
+ * Returns HTML representation for the info panel
+ * @returns {string}
+ */
+toHTML() {
+  let html = super.toHTML();
+  html += `
+    <div class="info-heading">Pot</div>
+    <span class="info-label">Shape</span>
+    <span class="info-value">${this.shape}</span>
+    <br>
+    <span class="info-label">Height</span>
+    <span class="info-value">${this.height.toFixed(2)} m</span>
+    <br>`;
+    
+  if (this.shape === 'round') {
+    html += `
+      <span class="info-label">Top Diameter</span>
+      <span class="info-value">${this.topDiameter.toFixed(2)} m</span>
+      <br>
+      <span class="info-label">Bottom Diameter</span>
+      <span class="info-value">${this.bottomDiameter.toFixed(2)} m</span>
+      <br>`;
+  } else {
+    html += `
+      <span class="info-label">Top Side</span>
+      <span class="info-value">${this.topSide.toFixed(2)} m</span>
+      <br>
+      <span class="info-label">Bottom Side</span>
+      <span class="info-value">${this.bottomSide.toFixed(2)} m</span>
+      <br>`;
+  }
+  
+  html += `
+    <span class="info-label">Plant</span>
+    <span class="info-value">${this.plant ? this.plant.name : 'None'}</span>
+    <br>
+  `;
+  return html;
+}
+
+/**
+ * Debug function to show the current state of the pot and its plant
+ */
+debugPlantState() {
+  console.log("Pot plant state:", {
+    hasPlant: !!this.plant,
+    plantDetails: this.plant ? {
+      type: this.plant.type,
+      name: this.plant.name,
+      parentRef: this.plant.parent === this ? "Correct" : "Incorrect",
+      hasParent: !!this.plant.parent,
+      actualParent: this.plant.parent
+    } : null,
+    potChildren: this.children.length,
+    childTypes: this.children.map(child => child.type || "unknown")
+  });
+}
 } 

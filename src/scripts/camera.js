@@ -76,6 +76,9 @@ export class CameraManager {
             0 // Rotação (não temos rotação no eixo z atualmente)
           );
         }
+        
+        // Esconder o painel de informações durante a rotação da câmera
+        this.hideInfoPanel();
       } catch (error) {
         console.warn('Erro ao atualizar ângulo na interface:', error);
       }
@@ -87,6 +90,9 @@ export class CameraManager {
       const left = new THREE.Vector3(1, 0, 0).applyAxisAngle(Y_AXIS, this.cameraAzimuth * DEG2RAD);
       this.cameraOrigin.add(forward.multiplyScalar(PAN_SENSITIVITY * event.movementY));
       this.cameraOrigin.add(left.multiplyScalar(PAN_SENSITIVITY * event.movementX));
+      
+      // Esconder o painel de informações durante o pan da câmera
+      this.hideInfoPanel();
     }
 
     this.updateCameraPosition();
@@ -109,6 +115,9 @@ export class CameraManager {
           0 // Rotação (não temos rotação no eixo z atualmente)
         );
       }
+      
+      // Esconder o painel de informações durante o zoom
+      this.hideInfoPanel();
     } catch (error) {
       console.warn('Erro ao atualizar ângulo na interface:', error);
     }
@@ -121,5 +130,15 @@ export class CameraManager {
     this.camera.left = (CAMERA_SIZE * aspect) / -2;
     this.camera.right = (CAMERA_SIZE * aspect) / 2;
     this.camera.updateProjectionMatrix();
+  }
+
+  /**
+   * Esconde o painel de informações
+   */
+  hideInfoPanel() {
+    const infoPanel = document.getElementById('info-panel');
+    if (infoPanel) {
+      infoPanel.style.visibility = 'hidden';
+    }
   }
 }

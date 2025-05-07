@@ -46,6 +46,9 @@ export class Game {
   lastInfoPanelUpdate = 0;
   _lastTouch = { x: null, y: null, dist: null };
   highlightedTiles = [];
+  _toolLock = false;
+  _lastAlertMessage = null;
+  _lastAlertTime = 0;
 
   constructor(room) {
     this.room = room;
@@ -342,18 +345,253 @@ export class Game {
    * Uses the currently active tool
    */
   useTool() {
+    // Adicionar proteção contra múltiplos cliques (debounce)
+    if (this._toolLock) {
+      console.log("Tool locked, ignoring request");
+      return;
+    }
+    
     switch (window.ui.activeToolId) {
       case 'select':
         this.updateSelectedObject();
         // Info panel is already updated in updateSelectedObject
         break;
       case 'trash':
+        // Aplicar trava para evitar múltiplas chamadas
+        this._toolLock = true;
+        
+        setTimeout(() => {
+          // Liberar a trava após um delay
+          this._toolLock = false;
+        }, 1000); // 1 segundo de trava
+        
         if (this.focusedObject) {
-          const { x, y } = this.focusedObject;
-          this.room.trash(x, y);
-          // Update panel immediately since the object was removed
-          window.ui.updateInfoPanel(this.selectedObject);
-          this.lastInfoPanelUpdate = Date.now();
+          console.log('Trying to trash object:', this.focusedObject);
+          console.log('Object type:', this.focusedObject.type);
+          
+          // Função auxiliar para confirmar a exclusão de um objeto
+          const confirmDeletion = (objectType, actionAfterConfirm) => {
+            // Verificar se o objeto é uma Tile da room
+            if (this.focusedObject instanceof Tile || 
+                (this.focusedObject.name && this.focusedObject.name.startsWith('Tile-')) ||
+                objectType.toLowerCase().includes('tile')) {
+              // Se for uma Tile, não exibir confirmação
+              actionAfterConfirm();
+              return;
+            }
+            
+            // Para outros objetos, exibir confirmação
+            const objectName = this.focusedObject.name || objectType;
+            if (confirm(`Tem certeza que deseja excluir este objeto (${objectName})?`)) {
+              actionAfterConfirm();
+              // Resetar ferramenta após exclusão bem-sucedida
+              this.resetToolAfterTrash();
+            } else {
+              // Mesmo se o usuário cancelar, resetar a ferramenta
+              this.resetToolAfterTrash();
+            }
+          };
+          
+          // Caso 1: Objeto é uma planta (cannabis-plant)
+          if (this.focusedObject.type === 'cannabis-plant') {
+            console.log('Detected cannabis plant');
+            
+            // Verificar se a planta está em um vaso
+            const parentObject = this.focusedObject.parent;
+            console.log('Plant parent:', parentObject);
+            
+            if (parentObject && parentObject.type === 'pot') {
+              confirmDeletion('planta', () => {
+                console.log('Plant is on a pot, removing plant only');
+                
+                try {
+                  // Adicionar debug
+                  if (typeof parentObject.debugPlantState === 'function') {
+                    parentObject.debugPlantState();
+                  }
+                  
+                  // Remover a planta do pot usando setPlant(null)
+                  parentObject.setPlant(null);
+                  
+                  // Verificar se a planta foi realmente removida
+                  if (typeof parentObject.debugPlantState === 'function') {
+                    parentObject.debugPlantState();
+                  }
+                  
+                  // Atualizar a contagem de plantas
+                  this.room.getPlantsModule().updatePlantCount();
+                  
+                  // Atualizar o painel de informações
+                  window.ui.updateInfoPanel(parentObject);
+                  this.lastInfoPanelUpdate = Date.now();
+                  console.log('Plant successfully removed from pot');
+                  
+                  // Resetar ferramenta após exclusão bem-sucedida
+                  this.resetToolAfterTrash();
+                } catch (error) {
+                  console.error('Error removing plant from pot:', error);
+                }
+              });
+              return;
+            } else {
+              // Planta diretamente em um tile (raro)
+              confirmDeletion('planta', () => {
+                console.log('Plant is directly on a tile');
+                try {
+                  const { x, y } = this.focusedObject;
+                  console.log('Removing plant at coordinates:', x, y);
+                  this.room.trash(x, y);
+                  window.ui.updateInfoPanel(this.selectedObject);
+                  this.lastInfoPanelUpdate = Date.now();
+                  console.log('Plant successfully removed from tile');
+                  
+                  // Resetar ferramenta após exclusão bem-sucedida
+                  this.resetToolAfterTrash();
+                } catch (error) {
+                  console.error('Error removing plant from tile:', error);
+                }
+              });
+              return;
+            }
+          }
+          
+          // Caso 2: Objeto é um pot
+          else if (this.focusedObject.type === 'pot') {
+            console.log('Detected pot:', this.focusedObject);
+            // Verificar se o pot tem uma planta
+            if (this.focusedObject.plant) {
+              console.log('Pot has a plant, showing warning');
+              this.showAlert('O vaso não está vazio. Remova a planta primeiro antes de excluir o vaso.');
+              // Resetar ferramenta mesmo após o aviso
+              this.resetToolAfterTrash();
+              return;
+            }
+            
+            // Se o pot estiver em uma tray, usar o método trash da tray
+            const parentObject = this.focusedObject.parent;
+            console.log('Pot parent:', parentObject);
+            
+            if (parentObject && parentObject.type === 'tray') {
+              confirmDeletion('vaso', () => {
+                console.log('Pot is on a tray - trying to find its location');
+                const tray = parentObject;
+                
+                // Método 1: Verificar cada tile da tray para encontrar o pot
+                let potFound = false;
+                for (let tx = 0; tx < tray.width; tx++) {
+                  for (let ty = 0; ty < tray.length; ty++) {
+                    const trayTile = tray.getTile(tx, ty);
+                    if (trayTile && trayTile.building === this.focusedObject) {
+                      console.log('Found pot on tray at', tx, ty);
+                      potFound = true;
+                      
+                      // Remover o pot usando o método trash da tray
+                      try {
+                        const result = tray.trash(tx, ty);
+                        console.log('Trash result:', result);
+                        // Atualizar a contagem de pots
+                        this.room.getPotsModule().updatePotCount();
+                        // Atualizar o painel de informações
+                        window.ui.updateInfoPanel(this.selectedObject);
+                        this.lastInfoPanelUpdate = Date.now();
+                        
+                        // Resetar ferramenta após exclusão bem-sucedida
+                        this.resetToolAfterTrash();
+                      } catch (error) {
+                        console.error('Error removing pot from tray:', error);
+                      }
+                      return;
+                    }
+                  }
+                }
+                
+                // Método 2: Se o método 1 falhar, tentar outros métodos
+                if (!potFound) {
+                  console.log('Pot not found in tray tiles, trying alternative method');
+                  // Vamos tentar encontrar as coordenadas do pot dentro da tray
+                  if (typeof this.focusedObject.x === 'number' && typeof this.focusedObject.y === 'number') {
+                    // Calcular as coordenadas locais na tray
+                    const localX = this.focusedObject.x - tray.x;
+                    const localY = this.focusedObject.y - tray.y;
+                    
+                    if (localX >= 0 && localX < tray.width && localY >= 0 && localY < tray.length) {
+                      console.log('Found pot at local coordinates:', localX, localY);
+                      try {
+                        tray.trash(localX, localY);
+                        this.room.getPotsModule().updatePotCount();
+                        window.ui.updateInfoPanel(this.selectedObject);
+                        this.lastInfoPanelUpdate = Date.now();
+                        
+                        // Resetar ferramenta após exclusão bem-sucedida
+                        this.resetToolAfterTrash();
+                      } catch (error) {
+                        console.error('Error removing pot from tray (method 2):', error);
+                      }
+                    } else {
+                      console.error('Calculated local coordinates are outside the tray bounds', localX, localY);
+                    }
+                  } else {
+                    console.error('Pot does not have valid coordinates');
+                  }
+                }
+              });
+              return;
+            } else {
+              // Pot diretamente em um tile
+              confirmDeletion('vaso', () => {
+                console.log('Pot is directly on a room tile');
+                const { x, y } = this.focusedObject;
+                this.room.trash(x, y);
+                window.ui.updateInfoPanel(this.selectedObject);
+                this.lastInfoPanelUpdate = Date.now();
+                
+                // Resetar ferramenta após exclusão bem-sucedida
+                this.resetToolAfterTrash();
+              });
+              return;
+            }
+          }
+          
+          // Caso 3: Objeto é uma tray
+          else if (this.focusedObject.type === 'tray') {
+            console.log('Detected tray');
+            // Verificar se a tray tem pots ou outros objetos usando o método isEmpty
+            const tray = this.focusedObject;
+            
+            if (!tray.isEmpty()) {
+              console.log('Tray is not empty, showing warning');
+              this.showAlert('A bandeja não está vazia. Remova todos os objetos da bandeja primeiro antes de excluí-la.');
+              // Resetar ferramenta mesmo após o aviso
+              this.resetToolAfterTrash();
+              return;
+            } else {
+              confirmDeletion('bandeja', () => {
+                console.log('Tray is empty, removing it');
+                const { x, y } = this.focusedObject;
+                this.room.trash(x, y);
+                window.ui.updateInfoPanel(this.selectedObject);
+                this.lastInfoPanelUpdate = Date.now();
+                
+                // Resetar ferramenta após exclusão bem-sucedida
+                this.resetToolAfterTrash();
+              });
+              return;
+            }
+          }
+          
+          // Caso 4: Qualquer outro tipo de objeto
+          else {
+            confirmDeletion(this.focusedObject.type || 'objeto', () => {
+              console.log('Other object type, using standard trash method');
+              const { x, y } = this.focusedObject;
+              this.room.trash(x, y);
+              window.ui.updateInfoPanel(this.selectedObject);
+              this.lastInfoPanelUpdate = Date.now();
+              
+              // Resetar ferramenta após exclusão bem-sucedida
+              this.resetToolAfterTrash();
+            });
+          }
         }
         break;
       case 'double-door':
@@ -620,6 +858,14 @@ export class Game {
     }
     
     // Update the info panel immediately when a new object is selected
+    if (this.selectedObject) {
+      // Garantir que o painel seja visível quando algo for selecionado
+      const infoPanel = document.getElementById('info-panel');
+      if (infoPanel) {
+        infoPanel.style.visibility = 'visible';
+      }
+    }
+    
     window.ui.updateInfoPanel(this.selectedObject);
     this.lastInfoPanelUpdate = Date.now();
   }
@@ -638,41 +884,94 @@ export class Game {
 
     this.raycaster.setFromCamera(coords, this.cameraManager.camera);
 
-    // Filter out objects marked to skip raycast (hidden walls)
-    let targets = [];
+    // Abordagem: colete todos os objetos interativos
+    const allTargets = [];
     
-    // Include objects from the room root
+    // Arrays para priorização por tipo
+    const plantObjects = [];  // Objetos de plantas cannabis
+    const potObjects = [];    // Objetos de vasos (pots)
+    const trayObjects = [];   // Objetos de bandejas (trays)
+    
+    // Percorrer a cena e coletar todos os objetos interativos
     this.room.root.traverse(object => {
       if (object.isMesh && (!object.userData || !object.userData.skipRaycast)) {
-        targets.push(object);
-      }
-    });
-    
-    // Additionally, specifically look for and include all tiles from trays
-    this.room.root.traverse(object => {
-      if (object.userData && object.userData.instance && object.userData.instance.type === 'tray') {
-        const tray = object.userData.instance;
-        // Add all tiles in the tray to targets
-        for (let x = 0; x < tray.width; x++) {
-          for (let y = 0; y < tray.length; y++) {
-            const trayTile = tray.getTile(x, y);
-            if (trayTile && trayTile.mesh) {
-              // Make sure the tile is marked as belonging to the tray
-              trayTile.mesh.userData = {
-                instance: trayTile,
-                parentTray: tray,
-                id: Math.random().toString(36).substr(2, 9)
-              };
-              targets.push(trayTile.mesh);
+        allTargets.push(object);
+        
+        // Verificar userData para categorização
+        if (object.userData && object.userData.instance) {
+          const instance = object.userData.instance;
+          
+          if (instance.type === 'cannabis-plant') {
+            plantObjects.push(object);
+          } else if (instance.type === 'pot') {
+            potObjects.push(object);
+            
+            // Se o vaso tem planta, adicionar a planta também
+            if (instance.plant) {
+              // Adicionar os meshes da planta, se existirem
+              if (instance.plant.mesh) {
+                plantObjects.push(instance.plant.mesh);
+              }
             }
+          } else if (instance.type === 'tray') {
+            trayObjects.push(object);
           }
         }
       }
     });
-
-    let intersections = this.raycaster.intersectObjects(targets, true);
+    
+    // Verificações de cima para baixo para a ferramenta trash ou select:
+    // 1. Planta -> 2. Pot -> 3. Tray -> 4. Outros
+    if (window.ui.activeToolId === 'trash' || window.ui.activeToolId === 'select') {
+      // Verificar interseções com plantas primeiro
+      const plantIntersections = this.raycaster.intersectObjects(plantObjects);
+      if (plantIntersections.length > 0) {
+        // Encontrar o objeto principal (cannabis-plant) a partir da interseção
+        let current = plantIntersections[0].object;
+        while (current) {
+          if (current.userData && current.userData.instance && current.userData.instance.type === 'cannabis-plant') {
+            return current.userData.instance;
+          }
+          
+          if (!current.parent) break;
+          current = current.parent;
+        }
+      }
+      
+      // Verificar interseções com pots em segundo lugar
+      const potIntersections = this.raycaster.intersectObjects(potObjects);
+      if (potIntersections.length > 0) {
+        // Encontrar o objeto principal (pot) a partir da interseção
+        let current = potIntersections[0].object;
+        while (current) {
+          if (current.userData && current.userData.instance && current.userData.instance.type === 'pot') {
+            return current.userData.instance;
+          }
+          
+          if (!current.parent) break;
+          current = current.parent;
+        }
+      }
+      
+      // Verificar interseções com trays em terceiro lugar
+      const trayIntersections = this.raycaster.intersectObjects(trayObjects);
+      if (trayIntersections.length > 0) {
+        // Encontrar o objeto principal (tray) a partir da interseção
+        let current = trayIntersections[0].object;
+        while (current) {
+          if (current.userData && current.userData.instance && current.userData.instance.type === 'tray') {
+            return current.userData.instance;
+          }
+          
+          if (!current.parent) break;
+          current = current.parent;
+        }
+      }
+    }
+    
+    // Caso geral: verificar interseções com todos os alvos
+    const intersections = this.raycaster.intersectObjects(allTargets, true);
     if (intersections.length > 0) {
-      // Get the first intersection and find its parent Object
       let current = intersections[0].object;
       
       // Special case: if the object has parentTray, return the tile directly
@@ -690,10 +989,12 @@ export class Game {
         current = current.parent;
       }
       
-      return current?.userData?.instance || null;
-    } else {
-      return null;
+      if (current && current.userData && current.userData.instance) {
+        return current.userData.instance;
+      }
     }
+    
+    return null;
   }
 
   /**
@@ -790,6 +1091,36 @@ export class Game {
     } catch (error) {
       console.error('Error loading room data from database:', error);
     }
+  }
+
+  /**
+   * Função para mostrar alertas com proteção contra múltiplos disparos
+   * @param {string} message Mensagem a ser exibida
+   */
+  showAlert(message) {
+    // Verificar se já existe um alerta recente com a mesma mensagem
+    if (this._lastAlertMessage === message && 
+        Date.now() - this._lastAlertTime < 2000) {
+      console.log("Alert suppressed (duplicate):", message);
+      return;
+    }
+    
+    // Registrar este alerta
+    this._lastAlertMessage = message;
+    this._lastAlertTime = Date.now();
+    
+    // Exibir o alerta
+    alert(message);
+  }
+
+  /**
+   * Reseta a ferramenta atual para a ferramenta de seleção (hand/select)
+   * após qualquer interação com a ferramenta trash
+   */
+  resetToolAfterTrash() {
+    // Sempre resetar para a ferramenta de seleção (hand) em qualquer dispositivo
+    console.log("Switching from trash to select tool");
+    window.ui.setActiveTool('select');
   }
 }
 

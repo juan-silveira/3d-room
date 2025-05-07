@@ -438,36 +438,93 @@ export class Tray extends Building {
    * Removes a building from the tray at the specified coordinates
    * @param {number} x The x-coordinate on the tray
    * @param {number} y The y-coordinate on the tray 
+   * @param {Function} [showAlert] Optional callback to display alerts
+   * @returns {boolean} True if the building was successfully removed, false otherwise
    */
-  trash(x, y) {
+  trash(x, y, showAlert) {
+    console.log(`Tray.trash called with coordinates: (${x}, ${y})`);
     const tile = this.getTile(x, y);
     
-    if (tile && tile.building) {
-      const wasPlant = tile.building.type === 'cannabis-plant';
-      const wasPot = tile.building.type === 'pot';
-      
-      // Check if pot has a plant before removing it
-      if (wasPot && tile.building.plant) {
-        // We need to update plant count if pot has plant
-        tile.building.setPlant(null);
-        // Get the room to update plant count
-        const room = this.getRoom();
-        if (room) {
-          room.getPlantsModule().updatePlantCount();
-        }
-      }
-      
+    if (!tile) {
+      console.error(`No tile found at (${x}, ${y}) in tray`);
+      return false;
+    }
+    
+    if (!tile.building) {
+      console.error(`No building found at tile (${x}, ${y}) in tray`);
+      return false;
+    }
+    
+    console.log(`Found building at (${x}, ${y}):`, tile.building.type);
+    
+    const wasPlant = tile.building.type === 'cannabis-plant';
+    const wasPot = tile.building.type === 'pot';
+    
+    // Caso especial: se for uma planta diretamente na tray (improvável, mas possível)
+    if (wasPlant) {
+      console.log("Removing plant from tray directly");
       tile.building.dispose();
       tile.setBuilding(null);
       tile.refreshView();
       
-      // Update the appropriate counter
+      // Atualizar contagem de plantas
+      const room = this.getRoom();
+      if (room) {
+        room.getPlantsModule().updatePlantCount();
+      }
+      return true;
+    }
+    
+    // Caso especial: se for um pot com planta
+    if (wasPot) {
+      if (tile.building.plant) {
+        console.log("Pot has a plant, showing warning");
+        // Usar callback se fornecida, ou alert diretamente
+        const alertMessage = 'O vaso não está vazio. Remova a planta primeiro antes de excluir o vaso.';
+        if (typeof showAlert === 'function') {
+          showAlert(alertMessage);
+        } else {
+          alert(alertMessage);
+        }
+        return false;
+      } else {
+        console.log("Removing empty pot from tray");
+      }
+    }
+    
+    // Remover o objeto (pot vazio ou outro)
+    try {
+      console.log("Disposing building:", tile.building);
+      const building = tile.building;
+      
+      // Primeiro limpar a referência no tile
+      tile.setBuilding(null);
+      
+      // Depois limpar recursos
+      if (building.mesh) {
+        if (building.parent) {
+          building.parent.remove(building);
+        }
+        building.dispose();
+      }
+      
+      // Atualizar a visualização
+      tile.refreshView();
+      this.refreshView();
+      
+      // Atualizar contadores apropriados
       const room = this.getRoom();
       if (room) {
         if (wasPot) {
           room.getPotsModule().updatePotCount();
         }
       }
+      
+      console.log("Building successfully removed from tray");
+      return true;
+    } catch (error) {
+      console.error("Error removing building from tray:", error);
+      return false;
     }
   }
 
@@ -538,6 +595,22 @@ export class Tray extends Building {
     `;
     
     return html;
+  }
+
+  /**
+   * Verifica se a tray está vazia (não possui nenhum objeto em cima)
+   * @returns {boolean} true se a tray estiver vazia, false caso contrário
+   */
+  isEmpty() {
+    for (let x = 0; x < this.width; x++) {
+      for (let y = 0; y < this.length; y++) {
+        const tile = this.getTile(x, y);
+        if (tile && tile.building) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   /**

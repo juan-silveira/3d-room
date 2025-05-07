@@ -546,7 +546,67 @@ export class GameUI {
       selectButtons.forEach(btn => {
         btn.classList.add('selected');
       });
+      
+      // Se selecionou a ferramenta 'select', verificar se há objeto selecionado
+      // para mostrar o painel de informações
+      if (this.activeToolId === 'select' && window.game && window.game.selectedObject) {
+        const infoPanel = document.getElementById('info-panel');
+        if (infoPanel) {
+          infoPanel.style.visibility = 'visible';
+        }
+      }
     }
+  }
+  
+  /**
+   * Define uma ferramenta como ativa programaticamente
+   * @param {string} toolId - ID da ferramenta a ser ativada ('select', 'trash', etc.)
+   */
+  setActiveTool(toolId) {
+    // Verificar se a ferramenta existe
+    const toolButton = document.querySelector(`[data-type="${toolId}"]`);
+    if (!toolButton) {
+      console.error(`Ferramenta ${toolId} não encontrada`);
+      return;
+    }
+    
+    // Desativar ferramenta anterior
+    if (this.selectedControl) {
+      this.selectedControl.classList.remove('selected');
+    }
+    
+    // Atualizar a ferramenta ativa
+    this.activeToolId = toolId;
+    this.selectedControl = toolButton;
+    this.selectedControl.classList.add('selected');
+    
+    // Atualizar todos os botões relacionados (desktop e mobile)
+    const allButtons = document.querySelectorAll(`[data-type="${toolId}"]`);
+    allButtons.forEach(btn => {
+      btn.classList.add('selected');
+    });
+    
+    // Se for mobile, desativar modo de navegação
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+      this.navMode = false;
+      
+      // Desativar botão de modo de navegação
+      const navButton = document.getElementById('button-nav-mode');
+      if (navButton) {
+        navButton.classList.remove('selected');
+      }
+      
+      // Se estiver selecionando a ferramenta 'select', verificar se há objeto selecionado
+      // para mostrar o painel de informações
+      if (toolId === 'select' && window.game && window.game.selectedObject) {
+        const infoPanel = document.getElementById('info-panel');
+        if (infoPanel) {
+          infoPanel.style.visibility = 'visible';
+        }
+      }
+    }
+    
+    console.log(`Ferramenta alterada para: ${toolId}`);
   }
 
   /**
@@ -634,6 +694,12 @@ export class GameUI {
     this.navMode = true;
     document.getElementById('button-nav-mode').classList.add('selected');
     document.getElementById('button-select').classList.remove('selected');
+    
+    // Esconder o painel de informações quando entrar no modo de navegação
+    const infoPanel = document.getElementById('info-panel');
+    if (infoPanel) {
+      infoPanel.style.visibility = 'hidden';
+    }
   }
 
 }
