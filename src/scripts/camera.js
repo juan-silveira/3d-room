@@ -23,6 +23,16 @@ const NAV_ZOOM_AMOUNT = 0.8;
 
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 
+/**
+ * Normalizes an angle to be between 0 and 360 degrees
+ * @param {number} angle - The angle to normalize in degrees
+ * @returns {number} - The normalized angle between 0 and 360 degrees
+ */
+function normalizeAngle(angle) {
+  // Using modulo to wrap around and handle negative values
+  return ((angle % 360) + 360) % 360;
+}
+
 export class CameraManager {
   constructor() {
     const aspect = window.ui.gameWindow.clientWidth / window.ui.gameWindow.clientHeight;
@@ -79,6 +89,10 @@ export class CameraManager {
     */
   updateCameraPosition() {
     this.camera.zoom = this.cameraRadius;
+    
+    // Normalize azimuth to be between 0 and 360 degrees
+    this.cameraAzimuth = normalizeAngle(this.cameraAzimuth);
+    
     this.camera.position.x = 100 * Math.sin(this.cameraAzimuth * DEG2RAD) * Math.cos(this.cameraElevation * DEG2RAD);
     this.camera.position.y = 100 * Math.sin(this.cameraElevation * DEG2RAD);
     this.camera.position.z = 100 * Math.cos(this.cameraAzimuth * DEG2RAD) * Math.cos(this.cameraElevation * DEG2RAD);

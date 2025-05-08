@@ -240,6 +240,15 @@ export class GameUI {
     allButtons.forEach(btn => {
       btn.classList.add('selected');
     });
+    
+    // Se for mobile, selecionar também o Select
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+      const selectButtons = document.querySelectorAll('[data-type="select"]');
+      selectButtons.forEach(btn => {
+        btn.classList.add('selected');
+      });
+      console.log('No mobile: Pot selecionado com Select também ativo');
+    }
   }
   
   /**
@@ -267,6 +276,15 @@ export class GameUI {
     allButtons.forEach(btn => {
       btn.classList.add('selected');
     });
+    
+    // Se for mobile, selecionar também o Select
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+      const selectButtons = document.querySelectorAll('[data-type="select"]');
+      selectButtons.forEach(btn => {
+        btn.classList.add('selected');
+      });
+      console.log('No mobile: Tray selecionado com Select também ativo');
+    }
   }
   
   /**
@@ -294,6 +312,15 @@ export class GameUI {
     allButtons.forEach(btn => {
       btn.classList.add('selected');
     });
+    
+    // Se for mobile, selecionar também o Select
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+      const selectButtons = document.querySelectorAll('[data-type="select"]');
+      selectButtons.forEach(btn => {
+        btn.classList.add('selected');
+      });
+      console.log('No mobile: Door selecionado com Select também ativo');
+    }
   }
   
   /**
@@ -813,6 +840,21 @@ export class GameUI {
       selectButtons.forEach(btn => {
         btn.classList.add('selected');
       });
+      
+      // Para ferramentas específicas no mobile, mantém também o Select ativo
+      const toolsRequiringSelect = ['trash', 'cannabis-plant', 'pot', 'tray', 'double-door'];
+      
+      if (toolsRequiringSelect.includes(this.activeToolId)) {
+        // Manter a ferramenta original como primária
+        const originalToolId = this.activeToolId;
+        
+        // Atualizar todos os botões de seleção visualmente, mas manter a ferramenta original como ativa
+        selectButtons.forEach(btn => {
+          btn.classList.add('selected');
+        });
+        
+        console.log(`No mobile: ferramenta ${originalToolId} selecionada com Select também ativo`);
+      }
       
       // Se selecionou a ferramenta 'select', verificar se há objeto selecionado
       // para mostrar o painel de informações
