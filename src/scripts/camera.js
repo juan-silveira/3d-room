@@ -17,6 +17,10 @@ const ELEVATION_SENSITIVITY = 0.2;
 const ZOOM_SENSITIVITY = 0.002;
 const PAN_SENSITIVITY = -0.01;
 
+// Navigation button sensitivity
+const NAV_PAN_AMOUNT = 1;
+const NAV_ZOOM_AMOUNT = 0.8;
+
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 
 export class CameraManager {
@@ -40,6 +44,34 @@ export class CameraManager {
     window.ui.gameWindow.addEventListener('wheel', this.onMouseScroll.bind(this), false);
     window.ui.gameWindow.addEventListener('mousedown', this.onMouseMove.bind(this), false);
     window.ui.gameWindow.addEventListener('mousemove', this.onMouseMove.bind(this), false);
+  }
+
+  /**
+   * Moves the camera in the specified direction
+   * @param {number} x - Amount to move in x direction
+   * @param {number} z - Amount to move in z direction
+   */
+  moveCamera(x, z) {
+    const forward = new THREE.Vector3(0, 0, 1).applyAxisAngle(Y_AXIS, this.cameraAzimuth * DEG2RAD);
+    const left = new THREE.Vector3(1, 0, 0).applyAxisAngle(Y_AXIS, this.cameraAzimuth * DEG2RAD);
+    
+    this.cameraOrigin.add(forward.multiplyScalar(NAV_PAN_AMOUNT * z));
+    this.cameraOrigin.add(left.multiplyScalar(NAV_PAN_AMOUNT * x));
+    
+    this.updateCameraPosition();
+    this.hideInfoPanel();
+  }
+
+  /**
+   * Zooms the camera in or out
+   * @param {number} amount - Positive for zooming out, negative for zooming in
+   */
+  zoomCamera(amount) {
+    this.cameraRadius *= amount < 0 ? 1 / NAV_ZOOM_AMOUNT : NAV_ZOOM_AMOUNT;
+    this.cameraRadius = Math.min(MAX_CAMERA_RADIUS, Math.max(MIN_CAMERA_RADIUS, this.cameraRadius));
+    
+    this.updateCameraPosition();
+    this.hideInfoPanel();
   }
 
   /**

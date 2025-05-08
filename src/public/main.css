@@ -199,7 +199,8 @@ h1 {
   padding: 0; 
   padding-bottom: 16px;
   width: 300px;
-
+  max-height: calc(100vh - 230px);
+  overflow-y: auto;
   background-color: #00000048;
 }
 
@@ -233,40 +234,6 @@ h1 {
   color: #ffffff;
   text-align: right;
 }
-
-.info-citizen-list {
-  list-style-type: none;
-  padding: 0;
-}
-
-.info-citizen {
-  background-color: #222941a0;
-  color: white;
-  padding: 4px 16px;
-  margin: 4px 0;
-  border-radius: 8px;
-  box-shadow: 0 2px 0 0px #151820;
-}
-
-.info-citizen-name {
-  font-size: 1.1em;
-}
-
-.info-citizen-icon {
-  position: relative;
-  width: 18px;
-  height: 18px;
-  top: 2px;
-  margin-right: 2px;
-}
-
-.info-citizen-details {
-  font-size: 1em;
-  display: flex;
-  justify-content: flex-start;
-  gap: 16px;
-}
-
 
 /* Plant history styling */
 .history-controls {
@@ -604,5 +571,144 @@ h1 {
   /* Estilo específico para modais em mobile */
   .modal-dialog {
     max-width: 90%;
+  }
+}
+
+/* Navigation Controls */
+.nav-controls {
+  position: fixed;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  pointer-events: none; /* Para que os cliques passem através do container principal */
+}
+
+.analog-container {
+  position: absolute;
+  left: 100px;
+  bottom: 0;
+  pointer-events: auto;
+}
+
+.direction-container {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.zoom-container {
+  position: absolute;
+  right: 20px;
+  bottom: 0;
+  pointer-events: auto;
+}
+
+.nav-button {
+  width: 50px;
+  height: 50px;
+  background-color: rgba(30, 35, 49, 0.7);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.nav-button:active {
+  background-color: rgba(58, 63, 80, 0.9);
+  transform: scale(0.95);
+}
+
+.nav-button:focus {
+  outline: none;
+}
+
+/* Analog stick styles */
+.analog-stick {
+  width: 100px;
+  height: 100px;
+  background-color: rgba(30, 35, 49, 0.7);
+  border-radius: 50%;
+  position: relative;
+  margin-bottom: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+}
+
+.analog-knob {
+  width: 40px;
+  height: 40px;
+  background-color: rgba(50, 80, 120, 0.8);
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.direction-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+.horizontal-buttons {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+}
+
+.zoom-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+#zoom-in-button {
+  background-color: rgba(40, 100, 40, 0.7);
+}
+
+#zoom-out-button {
+  background-color: rgba(100, 40, 40, 0.7);
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .nav-button {
+    width: 45px;
+    height: 45px;
+    font-size: 16px;
+  }
+  
+  .analog-container {
+    left: 10px;
+  }
+  
+  .zoom-container {
+    right: 10px;
+  }
+  
+  .analog-stick {
+    width: 90px;
+    height: 90px;
+  }
+  
+  .analog-knob {
+    width: 35px;
+    height: 35px;
   }
 }

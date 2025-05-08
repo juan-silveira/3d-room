@@ -73,6 +73,9 @@ export class GameUI {
     
     // Initialize instructions content
     this.updateInstructionsContent();
+    
+    // Setup navigation controls
+    this.setupNavigationControls();
   }
   
   /**
@@ -120,16 +123,20 @@ export class GameUI {
           <div class="instruction-value">TOUCH</div>
         </div>
         <div class="instruction-item">
+          <div class="instruction-label">NAVIGATION</div>
+          <div class="instruction-value">HAND TOOL</div>
+        </div>
+        <div class="instruction-item">
           <div class="instruction-label">ROTATE</div>
-          <div class="instruction-value">ONE FINGER</div>
+          <div class="instruction-value">ANALOG STICK</div>
         </div>
         <div class="instruction-item">
           <div class="instruction-label">PAN</div>
-          <div class="instruction-value">TWO FINGERS</div>
+          <div class="instruction-value">DIRECTION BUTTONS</div>
         </div>
         <div class="instruction-item">
           <div class="instruction-label">ZOOM</div>
-          <div class="instruction-value">PINCH</div>
+          <div class="instruction-value">+/- BUTTONS</div>
         </div>
       `;
     } else {
@@ -140,16 +147,20 @@ export class GameUI {
           <div class="instruction-value">Left Mouse</div>
         </div>
         <div class="instruction-item">
+          <div class="instruction-label">NAVIGATION</div>
+          <div class="instruction-value">Hand Tool / Right Mouse</div>
+        </div>
+        <div class="instruction-item">
           <div class="instruction-label">ROTATE</div>
-          <div class="instruction-value">Right Mouse</div>
+          <div class="instruction-value">Right Mouse / Analog Stick</div>
         </div>
         <div class="instruction-item">
           <div class="instruction-label">PAN</div>
-          <div class="instruction-value">Control + Right Mouse</div>
+          <div class="instruction-value">Control + Right Mouse / Direction Buttons</div>
         </div>
         <div class="instruction-item">
           <div class="instruction-label">ZOOM</div>
-          <div class="instruction-value">Scroll</div>
+          <div class="instruction-value">Scroll / +/- Buttons</div>
         </div>
       `;
     }
@@ -470,39 +481,25 @@ export class GameUI {
   }
 
   /**
-   * Updates the camera angle display in the title bar
-   * @param {number} azimuth Ângulo de azimuth em graus
-   * @param {number} elevation Ângulo de elevação em graus
-   * @param {number} rotation Ângulo de rotação em graus (opcional)
+   * Updates the angle display in the title bar
+   * @param {number} azimuth Azimuth angle in degrees
+   * @param {number} elevation Elevation angle in degrees
+   * @param {number} rotation Rotation angle in degrees
    */
   updateAngleDisplay(azimuth, elevation, rotation = 0) {
-    // Normalize angles to 0-360 and round to whole number
-    const normalizedAzimuth = Math.round(((azimuth % 360) + 360) % 360);
-    const normalizedElevation = Math.round(((elevation % 360) + 360) % 360);
-    const normalizedRotation = Math.round(((rotation % 360) + 360) % 360);
-    
-    // Atualizar azimuth
-    const azimuthElement = document.getElementById('angle-azimuth');
-    if (azimuthElement) {
-      azimuthElement.textContent = normalizedAzimuth + '°';
-    }
-    
-    // Atualizar elevação
-    const elevationElement = document.getElementById('angle-elevation');
-    if (elevationElement) {
-      elevationElement.textContent = normalizedElevation + '°';
-    }
-    
-    // Atualizar rotação
-    const rotationElement = document.getElementById('angle-rotation');
-    if (rotationElement) {
-      rotationElement.textContent = normalizedRotation + '°';
-    }
-    
-    // Para manter retrocompatibilidade com o código existente
-    const legacyAngleElement = document.getElementById('angle');
-    if (legacyAngleElement) {
-      legacyAngleElement.textContent = normalizedAzimuth + '°';
+    try {
+      // Round to 1 decimal place
+      const aziEl = document.getElementById('angle-azimuth');
+      const elevEl = document.getElementById('angle-elevation');
+      // const rotEl = document.getElementById('angle-rotation');
+      
+      if (aziEl && elevEl) {
+        aziEl.innerHTML = Math.round(azimuth) + '°';
+        elevEl.innerHTML = Math.round(elevation) + '°';
+        // rotEl.innerHTML = Math.round(rotation) + '°';
+      }
+    } catch (error) {
+      console.warn('Error updating angle display:', error);
     }
   }
 
@@ -514,6 +511,273 @@ export class GameUI {
     document.getElementById('loading').style.visibility = 'hidden';
   }
   
+  /**
+   * Sets up navigation control buttons
+   */
+  setupNavigationControls() {
+    // Get navigation buttons
+    const analogStick = document.getElementById('analog-stick');
+    const analogKnob = document.getElementById('analog-knob');
+    const upBtn = document.getElementById('up-button');
+    const downBtn = document.getElementById('down-button');
+    const leftBtn = document.getElementById('left-button');
+    const rightBtn = document.getElementById('right-button');
+    const zoomInBtn = document.getElementById('zoom-in-button');
+    const zoomOutBtn = document.getElementById('zoom-out-button');
+    
+    // Common function to prevent default touch behavior
+    const preventTouchDefault = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    
+    // Add event listeners for analog stick
+    if (analogStick && analogKnob) {
+      let isAnalogActive = false;
+      let initialX = 0;
+      let initialY = 0;
+      
+      // Mouse/Touch movement handling for analog stick
+      const moveAnalog = (e) => {
+        if (!isAnalogActive) return;
+        
+        let clientX, clientY;
+        
+        // Handle both mouse and touch events
+        if (e.touches) {
+          clientX = e.touches[0].clientX;
+          clientY = e.touches[0].clientY;
+        } else {
+          clientX = e.clientX;
+          clientY = e.clientY;
+        }
+        
+        const analogRect = analogStick.getBoundingClientRect();
+        const centerX = analogRect.left + analogRect.width / 2;
+        const centerY = analogRect.top + analogRect.height / 2;
+        
+        // Calculate distance from center
+        let deltaX = clientX - centerX;
+        let deltaY = clientY - centerY;
+        
+        // Limit to circular bounds
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const maxDistance = analogRect.width / 2 - analogKnob.offsetWidth / 2;
+        
+        if (distance > maxDistance) {
+          const angle = Math.atan2(deltaY, deltaX);
+          deltaX = Math.cos(angle) * maxDistance;
+          deltaY = Math.sin(angle) * maxDistance;
+        }
+        
+        // Update analog knob position
+        analogKnob.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+        
+        // Apply camera rotation based on analog stick position
+        if (window.game) {
+          // Convert delta to rotation amounts
+          const rotationX = deltaX / maxDistance; // -1 to 1
+          const rotationY = deltaY / maxDistance; // -1 to 1
+          
+          // Apply camera rotation adjustments
+          window.game.cameraManager.cameraAzimuth += -rotationX * 2; // Adjust sensitivity as needed
+          window.game.cameraManager.cameraElevation += rotationY * 2;
+          window.game.cameraManager.cameraElevation = Math.min(90, Math.max(0, window.game.cameraManager.cameraElevation));
+          window.game.cameraManager.updateCameraPosition();
+        }
+      };
+      
+      // Start analog movement
+      const startAnalog = (e) => {
+        isAnalogActive = true;
+        
+        // Set initial position
+        if (e.touches) {
+          initialX = e.touches[0].clientX;
+          initialY = e.touches[0].clientY;
+        } else {
+          initialX = e.clientX;
+          initialY = e.clientY;
+        }
+        
+        // Add movement listeners
+        document.addEventListener('mousemove', moveAnalog);
+        document.addEventListener('touchmove', moveAnalog, { passive: false });
+        
+        // Prevent default behavior
+        if (e.preventDefault) {
+          e.preventDefault();
+        }
+      };
+      
+      // End analog movement
+      const endAnalog = () => {
+        if (!isAnalogActive) return;
+        
+        isAnalogActive = false;
+        
+        // Reset analog knob position
+        analogKnob.style.transform = 'translate(-50%, -50%)';
+        
+        // Remove movement listeners
+        document.removeEventListener('mousemove', moveAnalog);
+        document.removeEventListener('touchmove', moveAnalog);
+      };
+      
+      // Add mouse event listeners
+      analogStick.addEventListener('mousedown', startAnalog);
+      document.addEventListener('mouseup', endAnalog);
+      
+      // Add touch event listeners
+      analogStick.addEventListener('touchstart', startAnalog, { passive: false });
+      document.addEventListener('touchend', endAnalog);
+      document.addEventListener('touchcancel', endAnalog);
+    }
+    
+    // Add event listeners for direction buttons (swapping up/down functionality)
+    if (upBtn) {
+      upBtn.addEventListener('click', () => {
+        if (window.game) {
+          window.game.cameraManager.moveCamera(0, -1); // Changed from 1 to -1
+        }
+      });
+      
+      upBtn.addEventListener('touchstart', (e) => {
+        preventTouchDefault(e);
+        if (window.game) {
+          window.game.cameraManager.moveCamera(0, -1); // Changed from 1 to -1
+        }
+      }, { passive: false });
+    }
+    
+    if (downBtn) {
+      downBtn.addEventListener('click', () => {
+        if (window.game) {
+          window.game.cameraManager.moveCamera(0, 1); // Changed from -1 to 1
+        }
+      });
+      
+      downBtn.addEventListener('touchstart', (e) => {
+        preventTouchDefault(e);
+        if (window.game) {
+          window.game.cameraManager.moveCamera(0, 1); // Changed from -1 to 1
+        }
+      }, { passive: false });
+    }
+    
+    if (leftBtn) {
+      leftBtn.addEventListener('click', () => {
+        if (window.game) {
+          window.game.cameraManager.moveCamera(-1, 0);
+        }
+      });
+      
+      leftBtn.addEventListener('touchstart', (e) => {
+        preventTouchDefault(e);
+        if (window.game) {
+          window.game.cameraManager.moveCamera(-1, 0);
+        }
+      }, { passive: false });
+    }
+    
+    if (rightBtn) {
+      rightBtn.addEventListener('click', () => {
+        if (window.game) {
+          window.game.cameraManager.moveCamera(1, 0);
+        }
+      });
+      
+      rightBtn.addEventListener('touchstart', (e) => {
+        preventTouchDefault(e);
+        if (window.game) {
+          window.game.cameraManager.moveCamera(1, 0);
+        }
+      }, { passive: false });
+    }
+    
+    if (zoomInBtn) {
+      zoomInBtn.addEventListener('click', () => {
+        if (window.game) {
+          window.game.cameraManager.zoomCamera(-1);
+        }
+      });
+      
+      zoomInBtn.addEventListener('touchstart', (e) => {
+        preventTouchDefault(e);
+        if (window.game) {
+          window.game.cameraManager.zoomCamera(-1);
+        }
+      }, { passive: false });
+    }
+    
+    if (zoomOutBtn) {
+      zoomOutBtn.addEventListener('click', () => {
+        if (window.game) {
+          window.game.cameraManager.zoomCamera(1);
+        }
+      });
+      
+      zoomOutBtn.addEventListener('touchstart', (e) => {
+        preventTouchDefault(e);
+        if (window.game) {
+          window.game.cameraManager.zoomCamera(1);
+        }
+      }, { passive: false });
+    }
+  }
+  
+  /**
+   * Shows the navigation controls
+   */
+  showNavigationControls() {
+    const navControls = document.getElementById('nav-controls');
+    const analogContainer = document.getElementById('analog-container');
+    const directionContainer = document.getElementById('direction-container');
+    const zoomContainer = document.getElementById('zoom-container');
+    
+    if (navControls) {
+      navControls.style.display = 'block';
+    }
+    
+    if (analogContainer) {
+      analogContainer.style.display = 'block';
+    }
+    
+    if (directionContainer) {
+      directionContainer.style.display = 'block';
+    }
+    
+    if (zoomContainer) {
+      zoomContainer.style.display = 'block';
+    }
+  }
+  
+  /**
+   * Hides the navigation controls
+   */
+  hideNavigationControls() {
+    const navControls = document.getElementById('nav-controls');
+    const analogContainer = document.getElementById('analog-container');
+    const directionContainer = document.getElementById('direction-container');
+    const zoomContainer = document.getElementById('zoom-container');
+    
+    if (navControls) {
+      navControls.style.display = 'none';
+    }
+    
+    if (analogContainer) {
+      analogContainer.style.display = 'none';
+    }
+    
+    if (directionContainer) {
+      directionContainer.style.display = 'none';
+    }
+    
+    if (zoomContainer) {
+      zoomContainer.style.display = 'none';
+    }
+  }
+
   /**
    * 
    * @param {*} event 
@@ -535,6 +799,9 @@ export class GameUI {
     allButtons.forEach(btn => {
       btn.classList.add('selected');
     });
+    
+    // Hide navigation controls when any tool besides nav-mode is selected
+    this.hideNavigationControls();
     
     // Se for mobile, alterna para modo seleção
     if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
@@ -586,14 +853,25 @@ export class GameUI {
       btn.classList.add('selected');
     });
     
-    // Se for mobile, desativar modo de navegação
+    // Hide navigation controls when any tool besides nav-mode is selected
+    if (toolId !== 'nav-mode') {
+      this.hideNavigationControls();
+    } else {
+      this.showNavigationControls();
+    }
+    
+    // Se for mobile, desativar modo de navegação exceto se for a ferramenta de navegação
     if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
-      this.navMode = false;
+      this.navMode = (toolId === 'nav-mode');
       
-      // Desativar botão de modo de navegação
+      // Desativar botão de modo de navegação se não for a ferramenta selecionada
       const navButton = document.getElementById('button-nav-mode');
       if (navButton) {
-        navButton.classList.remove('selected');
+        if (toolId === 'nav-mode') {
+          navButton.classList.add('selected');
+        } else {
+          navButton.classList.remove('selected');
+        }
       }
       
       // Se estiver selecionando a ferramenta 'select', verificar se há objeto selecionado
@@ -694,6 +972,9 @@ export class GameUI {
     this.navMode = true;
     document.getElementById('button-nav-mode').classList.add('selected');
     document.getElementById('button-select').classList.remove('selected');
+    
+    // Show navigation controls when nav mode is selected
+    this.showNavigationControls();
     
     // Esconder o painel de informações quando entrar no modo de navegação
     const infoPanel = document.getElementById('info-panel');

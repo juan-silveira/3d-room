@@ -170,7 +170,7 @@ export class Game {
     // --- TOUCH CAMERA CONTROLS (mobile nav mode) ---
     if (window.ui.navMode && ('ontouchstart' in window)) {
       const im = this.inputManager;
-      // ROTATE (1 dedo)
+      // Normal touch controls (for backward compatibility)
       if (im.isRightMouseDown && !im._touchDeltaDist) {
         if (this._lastTouch.x !== null && this._lastTouch.y !== null) {
           const dx = im.mouse.x - this._lastTouch.x;
