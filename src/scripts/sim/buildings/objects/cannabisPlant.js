@@ -1,7 +1,7 @@
 import { Building } from '../building.js';
 import { BuildingType } from '../buildingType.js';
 import { TILE_SCALE, metersToTileUnits } from '../../constants.js';
-import { mockDatabase, mockDatabaseMethods, STRAINS, GROWTH_STAGES } from '../../../data/mockDatabase.js';
+import { mockDatabase, mockDatabaseMethods, STRAINS, GROWTH_STAGES, USERS } from '../../../data/mockDatabase.js';
 
 export class CannabisPlant extends Building {
   /**
@@ -289,8 +289,8 @@ export class CannabisPlant extends Building {
       const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
       
       // Get user info
-      const user = mockDatabase.USERS && mockDatabase.USERS[entry.userId] 
-        ? mockDatabase.USERS[entry.userId] 
+      const user = USERS && USERS[entry.userId] 
+        ? USERS[entry.userId] 
         : { name: 'Unknown User', role: 'Unknown' };
       
       return {

@@ -93,6 +93,10 @@
           onclick="ui.onConfigToolClicked('door')">
           <img class="toolbar-icon" src="/icons/door.png">
         </button>
+        <button id='button-camera' class="ui-button" data-type="camera"
+          onclick="ui.onConfigToolClicked('camera')">
+          <img class="toolbar-icon" src="/icons/camera.png" alt="Camera Options">
+        </button>
         <button id="help-button" class="ui-button" data-bs-toggle="modal" data-bs-target="#instructionsModal">
           <i class="fas fa-question" style="color: white; font-size: 20px;"></i>
         </button>
@@ -142,7 +146,7 @@
       <div id="info-panel" class="container">
       </div>
       <div id="version">
-        v0.0.3
+        v0.2.0
       </div>
     </div>
   </div>
@@ -284,6 +288,64 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="button" class="btn btn-primary" onclick="ui.applyDoorConfig()">Apply and Select</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Camera Configuration Modal -->
+  <div class="modal fade" id="cameraConfigModal" tabindex="-1" aria-labelledby="cameraConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="cameraConfigModalLabel">Camera Options</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-grid gap-3">
+            <button type="button" class="btn btn-outline-primary" onclick="ui.applyCameraViewMode('portrait')">
+              <i class="fas fa-arrows-alt-v me-2"></i>Portrait View (100% Vertical)
+            </button>
+            <button type="button" class="btn btn-outline-primary" onclick="ui.applyCameraViewMode('landscape')">
+              <i class="fas fa-arrows-alt-h me-2"></i>Landscape View (100% Horizontal)
+            </button>
+            <button type="button" class="btn btn-outline-secondary" onclick="ui.applyCameraViewMode('reset')">
+              <i class="fas fa-undo me-2"></i>Reset Camera View
+            </button>
+            
+            <hr>
+            <h6>Zoom Settings</h6>
+            
+            <div class="mb-3">
+              <label for="portrait-fit-factor" class="form-label">Portrait Fit Factor: <span id="portrait-fit-value">0.7</span></label>
+              <input type="range" class="form-range" id="portrait-fit-factor" min="0.1" max="5" step="0.05" value="0.7" 
+                oninput="document.getElementById('portrait-fit-value').textContent = this.value">
+            </div>
+            
+            <div class="mb-3">
+              <label for="landscape-fit-factor" class="form-label">Landscape Fit Factor: <span id="landscape-fit-value">0.7</span></label>
+              <input type="range" class="form-range" id="landscape-fit-factor" min="0.1" max="5" step="0.05" value="0.7"
+                oninput="document.getElementById('landscape-fit-value').textContent = this.value">
+            </div>
+            
+            <div class="mb-3 d-none">
+              <label for="base-max-radius" class="form-label">Base Max Radius: <span id="base-max-radius-value">0.03</span></label>
+              <input type="range" class="form-range" id="base-max-radius" min="0.01" max="0.2" step="0.01" value="0.03"
+                oninput="document.getElementById('base-max-radius-value').textContent = this.value">
+            </div>
+            
+            <div class="mb-3">
+              <button type="button" class="btn btn-primary" onclick="ui.applyZoomSettings()">
+                Apply Zoom Settings
+              </button>
+              <button type="button" class="btn btn-outline-secondary" onclick="ui.resetZoomSettings()">
+                Reset Zoom Settings
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
     </div>

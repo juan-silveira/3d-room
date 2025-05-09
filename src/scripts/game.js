@@ -79,9 +79,23 @@ export class Game {
     window.assetManager = new AssetManager(() => {
       window.ui.hideLoadingText();
 
-      // Create room with the specified grid size: 36 x 280 tiles
-      this.room = new Room(36, 280, 3, 0.06);
+      // Get room dimensions from mockDatabase
+      const roomData = mockDatabase.rooms[0];
+      const roomWidth = roomData.dimensions.width;
+      const roomHeight = roomData.dimensions.height;
+      const wallHeight = roomData.dimensions.wallHeight;
+      const wallThickness = roomData.dimensions.wallThickness;
+
+      // Create room with dimensions from mock database
+      this.room = new Room(roomWidth, roomHeight, wallHeight, wallThickness);
       this.initialize(this.room);
+      
+      // Adjust camera parameters based on room size
+      this.cameraManager.adjustToRoomSize({
+        width: roomWidth,
+        height: roomHeight
+      });
+      
       this.start();
 
       setInterval(this.simulate.bind(this), 1000);
@@ -130,18 +144,33 @@ export class Game {
     const centerX = this.room.width / 2 - 0.5;
     const centerZ = this.room.height / 2 - 0.5;
 
-    // Luz direcional exatamente acima do centro da sala
+    // Luz direcional perpendicular à parede norte (90°)
     const sun = new THREE.DirectionalLight(0xffffff, 2);
-    sun.position.set(centerX, 40, centerZ);
+    
+    // Calcular posição ao norte com base nas dimensões da sala
+    // A luz é posicionada no centro horizontal, mas ao norte da sala
+    const northOffset = Math.max(20, this.room.height / 2); // Garante distância mínima
+    const lightHeight = Math.max(40, this.room.height); // Altura proporcional
+    
+    // Posicionar a luz ao norte da sala (Z negativo é norte)
+    sun.position.set(centerX, lightHeight, centerZ - northOffset);
+    
+    // Apontar a luz diretamente para o centro da sala (perpendicular à parede norte)
+    sun.target.position.set(centerX, 0, centerZ);
+    this.scene.add(sun.target); // Importante: adicionar o target à cena
+    
     sun.castShadow = true;
-    sun.shadow.camera.left = -this.room.width;
-    sun.shadow.camera.right = this.room.width;
-    sun.shadow.camera.top = this.room.height;
-    sun.shadow.camera.bottom = -this.room.height;
+    
+    // Ajustar a câmera da sombra com base no tamanho da sala
+    const shadowSize = Math.max(this.room.width, this.room.height) * 1.5;
+    sun.shadow.camera.left = -shadowSize;
+    sun.shadow.camera.right = shadowSize;
+    sun.shadow.camera.top = shadowSize;
+    sun.shadow.camera.bottom = -shadowSize;
     sun.shadow.mapSize.width = 2048;
     sun.shadow.mapSize.height = 2048;
     sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 60;
+    sun.shadow.camera.far = lightHeight + shadowSize;
     sun.shadow.normalBias = 0.01;
     this.scene.add(sun);
 
@@ -846,9 +875,13 @@ export class Game {
    * Sets the currently selected object and highlights it
    */
   updateSelectedObject() {
-    this.selectedObject?.setSelected(false);
+    if (this.selectedObject && typeof this.selectedObject.setSelected === 'function') {
+      this.selectedObject.setSelected(false);
+    }
     this.selectedObject = this.focusedObject;
-    this.selectedObject?.setSelected(true);
+    if (this.selectedObject && typeof this.selectedObject.setSelected === 'function') {
+      this.selectedObject.setSelected(true);
+    }
     
     // Update the selected tile
     if (this.selectedObject instanceof Tile) {
@@ -1019,6 +1052,17 @@ export class Game {
       // Set room name
       room.name = roomData.name;
       
+      // Place doors if there are any defined
+      if (roomData.doors && roomData.doors.length > 0) {
+        for (const doorData of roomData.doors) {
+          const { x, y } = doorData.position;
+          const width = doorData.width || 2; // Default width is 2
+          
+          // Place door at position
+          room.placeDoor(x, y, width);
+        }
+      }
+      
       // Load equipment
       const equipment = mockDatabaseMethods.getRoomEquipment(roomData.id);
       
@@ -1086,6 +1130,9 @@ export class Game {
       room.getPotsModule().updatePotCount();
       room.getPlantsModule().updatePlantCount();
       room.getTraysModule().updateTrayCount();
+      
+      // Update the title bar with the room name
+      window.ui.updateTitleBar(this);
       
       console.log('Room data loaded from mock database');
     } catch (error) {

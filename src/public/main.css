@@ -52,8 +52,8 @@ h1 {
   position: absolute;
   color: white;
   right: 0;
-  bottom: 0;
-  margin: 8px;
+  top: 0;
+  margin: 13px 5px 0 0;
 }
 
 .text-overlay {
@@ -97,8 +97,8 @@ h1 {
 }
 
 .ui-button {
-  height: 48px;
-  width: 48px;
+  min-height: 48px;
+  min-width: 48px;
   margin: 4px 0;
 
   transition: background-color 0.1s ease-in-out;
@@ -194,14 +194,18 @@ h1 {
 #info-panel {
   visibility: hidden;
   position: fixed;
-  top: 64px;
-  right: 0px;
-  padding: 0; 
-  padding-bottom: 16px;
-  width: 300px;
-  max-height: calc(100vh - 230px);
+  top: 33px;
+  right: -15px;
+  padding: 15px;
+  margin: 15px;
+  width: 400px;
+  max-height: calc(100vh - 49px);
+  scrollbar-width: thin;
   overflow-y: auto;
-  background-color: #00000048;
+  background-color: rgba(0, 0, 0, 0.7);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  z-index: 1000;
 }
 
 .info-heading {
@@ -328,16 +332,6 @@ h1 {
 .history-entry[data-type="Harvest"] .history-type { color: #8BC34A; }
 
 /* Info panel styling improvements */
-#info-panel {
-  max-height: calc(100vh - 150px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  background-color: rgba(0, 0, 0, 0.7);
-  border-radius: 8px;
-  padding: 15px;
-  margin: 15px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
 
 #info-panel::-webkit-scrollbar {
   width: 6px;
@@ -446,12 +440,10 @@ h1 {
 
 /* Ajuste para mobile em modo paisagem */
 @media (max-height: 500px) and (orientation: landscape) {
-  #ui-toolbar {
-    max-height: calc(100vh - 64px);
-    padding-bottom: 50px; /* Espaço para evitar que o último item fique escondido */
+  #info-panel {
+    width: 300px;
   }
-  
-  /* Aumentar a altura do modal em landscape para mostrar mais conteúdo */
+
   .modal-dialog {
     max-height: 90vh;
   }
@@ -563,10 +555,7 @@ h1 {
 
 /* Ajustes para mobile */
 @media (max-height: 500px) and (orientation: landscape) {
-  #ui-toolbar {
-    max-height: calc(100vh - 64px);
-    padding-bottom: 50px; /* Espaço para evitar que o último item fique escondido */
-  }
+
   
   /* Estilo específico para modais em mobile */
   .modal-dialog {

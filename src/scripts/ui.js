@@ -147,20 +147,16 @@ export class GameUI {
           <div class="instruction-value">Left Mouse</div>
         </div>
         <div class="instruction-item">
-          <div class="instruction-label">NAVIGATION</div>
-          <div class="instruction-value">Hand Tool / Right Mouse</div>
-        </div>
-        <div class="instruction-item">
           <div class="instruction-label">ROTATE</div>
-          <div class="instruction-value">Right Mouse / Analog Stick</div>
+          <div class="instruction-value">Right Mouse</div>
         </div>
         <div class="instruction-item">
           <div class="instruction-label">PAN</div>
-          <div class="instruction-value">Control + Right Mouse / Direction Buttons</div>
+          <div class="instruction-value">Control + Right Mouse</div>
         </div>
         <div class="instruction-item">
           <div class="instruction-label">ZOOM</div>
-          <div class="instruction-value">Scroll / +/- Buttons</div>
+          <div class="instruction-value">Scroll</div>
         </div>
       `;
     }
@@ -211,6 +207,36 @@ export class GameUI {
       modal.show();
     } else if (toolType === 'door') {
       const modal = new bootstrap.Modal(document.getElementById('doorConfigModal'));
+      modal.show();
+    } else if (toolType === 'camera') {
+      // Initialize camera settings UI with current values
+      if (window.game && window.game.cameraManager) {
+        const settings = window.game.cameraManager.zoomSettings;
+        
+        // Get room dimensions for calculating the landscape fit factor
+        const roomDimensions = {
+          width: window.game.room.width,
+          height: window.game.room.height
+        };
+        
+        // Update sliders
+        const portraitSlider = document.getElementById('portrait-fit-factor');
+        const portraitValue = document.getElementById('portrait-fit-value');
+        portraitSlider.value = settings.portraitFitFactor;
+        portraitValue.textContent = settings.portraitFitFactor;
+        
+        const landscapeSlider = document.getElementById('landscape-fit-factor');
+        const landscapeValue = document.getElementById('landscape-fit-value');
+        landscapeSlider.value = settings.landscapeFitFactor;
+        landscapeValue.textContent = settings.landscapeFitFactor.toFixed(2);
+        
+        const baseRadiusSlider = document.getElementById('base-max-radius');
+        const baseRadiusValue = document.getElementById('base-max-radius-value');
+        baseRadiusSlider.value = settings.baseMaxRadius;
+        baseRadiusValue.textContent = settings.baseMaxRadius;
+      }
+      
+      const modal = new bootstrap.Modal(document.getElementById('cameraConfigModal'));
       modal.show();
     }
   }
@@ -611,6 +637,9 @@ export class GameUI {
           window.game.cameraManager.cameraElevation += rotationY * 2;
           window.game.cameraManager.cameraElevation = Math.min(90, Math.max(0, window.game.cameraManager.cameraElevation));
           window.game.cameraManager.updateCameraPosition();
+          
+          // Esconder o painel de informações durante o uso do analog stick
+          window.game.cameraManager.hideInfoPanel();
         }
       };
       
@@ -935,11 +964,6 @@ export class GameUI {
    */
   updateTitleBar(game) {
     document.getElementById('room-name').innerHTML = game.room.name;
-    document.getElementById('population-counter').innerHTML = game.room.population;
-
-    const date = new Date('1/1/2023');
-    date.setDate(date.getDate() + game.room.simTime);
-    document.getElementById('sim-time').innerHTML = date.toLocaleDateString();
     
     // Update angle display
     this.updateAngleDisplay(game.cameraManager.cameraAzimuth, game.cameraManager.cameraElevation);
@@ -1000,7 +1024,16 @@ export class GameUI {
     const infoElement = document.getElementById('info-panel')
     if (object) {
       infoElement.style.visibility = 'visible';
-      infoElement.innerHTML = object.toHTML();
+      if (typeof object.toHTML === 'function') {
+        infoElement.innerHTML = object.toHTML();
+      } else {
+        infoElement.innerHTML = `<div class="info-heading">Object Info</div>
+          <span class="info-label">Type</span>
+          <span class="info-value">${object.type || 'Unknown'}</span>
+          <br>
+          <span class="info-label">Name</span>
+          <span class="info-value">${object.name || 'Unnamed Object'}</span>`;
+      }
     } else {
       infoElement.style.visibility = 'hidden';
       infoElement.innerHTML = '';
@@ -1022,6 +1055,128 @@ export class GameUI {
     const infoPanel = document.getElementById('info-panel');
     if (infoPanel) {
       infoPanel.style.visibility = 'hidden';
+    }
+  }
+
+  /**
+   * Apply camera view mode
+   * @param {string} mode - Mode to apply (portrait, landscape, reset)
+   */
+  applyCameraViewMode(mode) {
+    // Hide the modal
+    const modalElement = document.getElementById('cameraConfigModal');
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    modal.hide();
+    
+    // Get room dimensions from the game
+    const roomDimensions = {
+      width: window.game.room.width,
+      height: window.game.room.height
+    };
+    
+    console.log(`Applying camera mode: ${mode}, room dimensions:`, roomDimensions);
+    
+    // Apply the selected camera mode
+    if (mode === 'portrait') {
+      window.game.cameraManager.fitVertical(roomDimensions);
+    } else if (mode === 'landscape') {
+      window.game.cameraManager.fitHorizontal(roomDimensions);
+    } else if (mode === 'reset') {
+      window.game.cameraManager.resetView();
+    }
+  }
+  
+  /**
+   * Apply custom zoom settings from the camera config modal
+   */
+  applyZoomSettings() {
+    // Get values from sliders
+    const portraitFitFactor = parseFloat(document.getElementById('portrait-fit-factor').value);
+    const landscapeFitFactor = parseFloat(document.getElementById('landscape-fit-factor').value);
+    const baseMaxRadius = parseFloat(document.getElementById('base-max-radius').value);
+    
+    // Update camera settings
+    const newSettings = {
+      portraitFitFactor,
+      landscapeFitFactor,
+      baseMaxRadius
+    };
+    
+    console.log('Applying new zoom settings:', newSettings);
+    
+    // Apply settings
+    if (window.game && window.game.cameraManager) {
+      window.game.cameraManager.updateZoomSettings(newSettings);
+      
+      // Re-apply current view if in top-down mode
+      const azimuth = window.game.cameraManager.cameraAzimuth;
+      const elevation = window.game.cameraManager.cameraElevation;
+      
+      // Check if we're in a portrait/landscape view to refresh it
+      if (Math.abs(elevation - 90) < 5) { // We're in a top-down view
+        const roomDimensions = {
+          width: window.game.room.width,
+          height: window.game.room.height
+        };
+        
+        // If azimuth is closer to 180, we're in portrait mode
+        if (Math.abs(azimuth - 180) < 45 || Math.abs(azimuth - 540) < 45) {
+          window.game.cameraManager.fitVertical(roomDimensions);
+        } 
+        // If azimuth is closer to 270, we're in landscape mode
+        else if (Math.abs(azimuth - 270) < 45 || Math.abs(azimuth - 630) < 45) {
+          window.game.cameraManager.fitHorizontal(roomDimensions);
+        }
+      }
+    }
+  }
+
+  calculateScale(H) {
+    H = Math.max(0, H);
+    
+    let scale;
+    
+    if (H <= 20) {
+      scale = 4.5;
+    } else if (H <= 40) {
+      scale = 6 - 0.075 * H;
+    } else if (H <= 80) {
+      scale = 4.5 - 0.0375 * H;
+    } else if (H <= 160) {
+      scale = 2.25 - 0.009375 * H;
+    } else {
+      scale = 2.25 - 0.009375 * H;
+    }
+    
+    return Math.round(scale * 100) / 100;
+  }
+  
+  /**
+   * Reset zoom settings to defaults
+   */
+  resetZoomSettings() {
+    // Get room dimensions to calculate the appropriate landscape fit factor
+    const roomDimensions = {
+      width: window.game.room.width,
+      height: window.game.room.height
+    };
+    
+    // Calculate the landscape fit factor using the same formula as in camera.js
+    const calculatedLandscapeFactor = this.calculateScale(roomDimensions.height);
+    
+    // Reset sliders to default/calculated values
+    document.getElementById('portrait-fit-factor').value = 4.5;
+    document.getElementById('portrait-fit-value').textContent = 4.5;
+    
+    document.getElementById('landscape-fit-factor').value = calculatedLandscapeFactor;
+    document.getElementById('landscape-fit-value').textContent = calculatedLandscapeFactor.toFixed(2);
+    
+    document.getElementById('base-max-radius').value = 0.03;
+    document.getElementById('base-max-radius-value').textContent = 0.03;
+    
+    // Reset camera settings
+    if (window.game && window.game.cameraManager) {
+      window.game.cameraManager.resetZoomSettings();
     }
   }
 
